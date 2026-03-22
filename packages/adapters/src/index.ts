@@ -7,3 +7,5 @@ export * from './driving/web-ui/transparency-panel-component.js';
 export * from './driving/web-ui/employee-daily-prompt-app.js';
 export * from './driving/web-ui/browser-local-state-store.js';
 export * from './driving/web-ui/employee-daily-prompt-browser-runtime.js';
+export * from './driving/rest-api/question-authoring-contract.js';
+export * from './driven/storage/versioned-question-selection-state-store.js';
