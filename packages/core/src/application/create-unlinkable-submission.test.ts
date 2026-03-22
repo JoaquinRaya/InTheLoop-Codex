@@ -1,4 +1,4 @@
-import { isLeft, isRight } from 'fp-ts/Either';
+import { isLeft, isRight } from '../domain/either.js';
 import { describe, expect, it } from 'vitest';
 import { createUnlinkableSubmissionArtifacts } from './create-unlinkable-submission.js';
 

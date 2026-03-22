@@ -1,5 +1,5 @@
-import { isLeft, isRight } from 'fp-ts/Either';
-import { isNone, isSome } from 'fp-ts/Option';
+import { isLeft, isRight } from '../domain/either.js';
+import { isNone, isSome } from '../domain/option.js';
 import { describe, expect, it } from 'vitest';
 import { validateResponsePayload } from './validate-response-payload.js';
 

@@ -1,4 +1,4 @@
-import { isSome } from 'fp-ts/Option';
+import { isSome } from '../domain/option.js';
 import { describe, expect, it } from 'vitest';
 import {
   applyDailyPromptOutcome,

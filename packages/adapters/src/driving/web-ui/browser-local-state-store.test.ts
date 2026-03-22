@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBrowserLocalStateStore } from './browser-local-state-store.js';
 import { createEmptyEmployeeClientLocalState } from '../../../../core/src/application/employee-daily-prompt.js';
-import { some } from 'fp-ts/Option';
+import { some } from '../../../../core/src/domain/option.js';
 
 describe('createBrowserLocalStateStore', () => {
   it('persists and restores employee prompt local state through storage', () => {
@@ -24,9 +24,9 @@ describe('createBrowserLocalStateStore', () => {
       })
     };
 
-    store.save(state);
+    store.saveState(state);
 
-    const reloaded = store.load();
+    const reloaded = store.loadState();
 
     expect(reloaded.lastAnsweredDay._tag).toBe('Some');
     expect(reloaded.cachedProfile._tag).toBe('Some');
@@ -43,7 +43,7 @@ describe('createBrowserLocalStateStore', () => {
     };
 
     const store = createBrowserLocalStateStore(storage);
-    const loaded = store.load();
+    const loaded = store.loadState();
 
     expect(loaded.lastAnsweredDay._tag).toBe('None');
     expect(loaded.cachedProfile._tag).toBe('None');
