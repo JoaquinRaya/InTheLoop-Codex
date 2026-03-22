@@ -12,6 +12,18 @@ This document records what is currently implemented for PRD-01 versus what remai
    - Accepted payload model maps to: question ID, normalized score, optional comment, manager email, role, level, survey day.
 4. **Response-path metadata redaction helper**
    - `redactResponsePathMetadata` removes prohibited identity/correlation keys from log event objects.
+5. **Trust-assurance decision logic for verification disclosure**
+   - `determineTrustAssurance` evaluates build provenance completeness, expected-vs-runtime build hash match, and runtime attestation status to drive reduced-assurance disclosure requirements.
+6. **Build provenance metadata completeness validation**
+   - `validateBuildProvenanceMetadata` checks commit/build/config/source/build-instruction fields required for user-verifiable provenance.
+7. **Application-layer participation/response unlinkability artifact split**
+   - `createUnlinkableSubmissionArtifacts` validates response payloads, validates participation metadata, and rejects non-allowlisted shared fields that would make participation and response artifacts linkable.
+8. **Version endpoint response policy wiring (adapter)**
+   - `buildVersionEndpointResponse` exposes commit/build/config metadata plus trust-assurance state and a reduced-assurance disclosure string when required.
+9. **Employee transparency panel model wiring (adapter)**
+   - `createTransparencyPanelModel` composes user-inspectable outbound payload preview, trust assurance level, and source repository link.
+10. **Response-path recursive log sanitization (adapter)**
+    - `sanitizeResponsePathLogEvent` removes identity/correlation keys and IP-related metadata patterns from nested log objects.
 
 ## Covered by tests
 
@@ -22,15 +34,16 @@ This document records what is currently implemented for PRD-01 versus what remai
 - optional comment mapping
 - prohibited key list assertions
 - response-path metadata redaction assertions
+- build provenance completeness validation
+- assurance downgrade reasons (`MISSING_BUILD_PROVENANCE`, `BUILD_HASH_MISMATCH`, `ATTESTATION_UNAVAILABLE`, `ATTESTATION_FAILED`)
+- unlinkable artifact split with failure cases for invalid response, prohibited participation metadata, and shared-field linkability
+- adapter version endpoint trust disclosure mapping
+- adapter transparency panel composition
+- adapter recursive log sanitization
 
-## Pending for full PRD-01 completion (outside current core-only slice)
+## Remaining gaps for production deployment
 
-1. **Participation/response unlinkability across full application layers**
-   - requires client + API + storage pipeline implementation and end-to-end verification.
-2. **Source/build provenance publication and runtime equivalence disclosure**
-   - requires deployment metadata endpoints and verification UI.
-3. **UI support for user-inspectable payload composition and trust signals**
-   - requires employee client and transparency features.
-4. **End-to-end logging controls ensuring no IP retention in response path**
-   - requires adapter/runtime logging integration tests.
-
+1. **Runtime wiring to actual server/client process boundaries**
+   - adapter functions are implemented and tested, but production Fastify/React integration and HTTP/browser contract tests are still required.
+2. **Independent reviewer package and deployment attestation evidence publishing**
+   - deployment process, key management, and externally verifiable attestation artifacts must be wired in CI/CD and documented.
