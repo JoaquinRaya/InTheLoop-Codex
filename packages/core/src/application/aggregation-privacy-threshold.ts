@@ -81,10 +81,6 @@ const computeComparison = (
   currentAverage: number,
   previousResponses: ReadonlyArray<ResponsePayload>
 ): Option<ThresholdMetComparison> => {
-  if (previousResponses.length === 0) {
-    return none();
-  }
-
   const previousAverage = averageScore(previousResponses);
 
   return some({
