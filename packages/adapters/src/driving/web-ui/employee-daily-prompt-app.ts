@@ -30,6 +30,10 @@ import {
 } from './employee-daily-prompt-component.js';
 import { createTransparencyPanelModel, type PackagingStatus } from './transparency-panel-model.js';
 import { renderTransparencyPanelComponent } from './transparency-panel-component.js';
+import {
+  prepareDelayedAnonymousSubmission,
+  type AnonymousSubmissionDelayConfig
+} from './anonymous-submission-client.js';
 
 /**
  * View-model input for a prompt question rendered to employees.
@@ -122,6 +126,18 @@ export type PromptActionInput = Readonly<{
   readonly versionInput: VersionEndpointInput;
   readonly stateStore: EmployeePromptLocalStateStore;
   readonly packagingPipelineSignal: PackagingPipelineSignal | null;
+  readonly anonymousSubmissionTransport: AnonymousSubmissionTransportInput | null;
+}>;
+
+/**
+ * Optional runtime transport inputs for PRD-04 delayed anonymous submission.
+ */
+export type AnonymousSubmissionTransportInput = Readonly<{
+  readonly encryptedPayload: string;
+  readonly receivedAtEpochMs: number;
+  readonly transportMetadata: Readonly<Record<string, string>>;
+  readonly randomUnitInterval: number;
+  readonly delayConfig: AnonymousSubmissionDelayConfig;
 }>;
 
 /**
@@ -132,6 +148,7 @@ export type PromptActionResult = Readonly<{
   readonly packagingStatus: PackagingStatus;
   readonly transparencyPanelHtml: string;
   readonly responseValidationError: string | null;
+  readonly scheduledAnonymousSubmissionDelayMs: number | null;
 }>;
 
 /**
@@ -218,14 +235,33 @@ export const handleEmployeePromptAction = (input: PromptActionInput): PromptActi
       transparencyPanelHtml: renderTransparencyPanelComponent(
         createTransparencyPanelModel({}, input.versionInput, 'NOT_PACKAGED')
       ),
-      responseValidationError: 'A single option must be selected before submitting.'
+      responseValidationError: 'A single option must be selected before submitting.',
+      scheduledAnonymousSubmissionDelayMs: null
     };
   }
 
   const profile = loadedState.cachedProfile._tag === 'Some' ? loadedState.cachedProfile.value : null;
   const responsePayload = buildResponsePayload(input, profile);
   const artifactResult = buildArtifactResult(input, responsePayload);
-  const packagingStatus = mapPackagingSignal(artifactResult, input.packagingPipelineSignal);
+  const delayedAnonymousSubmission =
+    artifactResult !== null &&
+    artifactResult._tag === 'Right' &&
+    input.anonymousSubmissionTransport !== null
+      ? prepareDelayedAnonymousSubmission({
+          payloadCiphertext: input.anonymousSubmissionTransport.encryptedPayload,
+          receivedAtEpochMs: input.anonymousSubmissionTransport.receivedAtEpochMs,
+          transportMetadata: input.anonymousSubmissionTransport.transportMetadata,
+          randomUnitInterval: input.anonymousSubmissionTransport.randomUnitInterval,
+          delayConfig: input.anonymousSubmissionTransport.delayConfig
+        })
+      : null;
+
+  const derivedPackagingSignal: PackagingPipelineSignal | null =
+    delayedAnonymousSubmission !== null && delayedAnonymousSubmission._tag === 'Left'
+      ? 'FAILED'
+      : input.packagingPipelineSignal;
+
+  const packagingStatus = mapPackagingSignal(artifactResult, derivedPackagingSignal);
 
   const updatedState = applyDailyPromptOutcomePort(input.localDay, loadedState, input.action);
   input.stateStore.saveState(updatedState);
@@ -237,8 +273,15 @@ export const handleEmployeePromptAction = (input: PromptActionInput): PromptActi
       createTransparencyPanelModel(responsePayload, input.versionInput, packagingStatus)
     ),
     responseValidationError:
+      delayedAnonymousSubmission !== null && delayedAnonymousSubmission._tag === 'Left'
+        ? delayedAnonymousSubmission.left.message
+        :
       artifactResult !== null && artifactResult._tag === 'Left'
         ? artifactResult.left.message
+        : null,
+    scheduledAnonymousSubmissionDelayMs:
+      delayedAnonymousSubmission !== null && delayedAnonymousSubmission._tag === 'Right'
+        ? delayedAnonymousSubmission.right.delayMs
         : null
   };
 };

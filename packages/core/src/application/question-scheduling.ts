@@ -137,19 +137,12 @@ const extractLocalDate = (timestampUtcIso: string, timeZone: string): Either<Que
       month: '2-digit',
       day: '2-digit'
     });
-    const parts = formatter.formatToParts(utcDate);
-    const year = parts.find((part) => part.type === 'year')?.value;
-    const month = parts.find((part) => part.type === 'month')?.value;
-    const day = parts.find((part) => part.type === 'day')?.value;
+    const partEntries = formatter
+      .formatToParts(utcDate)
+      .map((part) => [part.type, part.value] as const);
+    const partMap = Object.fromEntries(partEntries) as Readonly<Record<string, string>>;
 
-    if (year === undefined || month === undefined || day === undefined) {
-      return left({
-        code: 'INVALID_TIMEZONE',
-        message: `Failed to derive local date for timezone: ${timeZone}`
-      });
-    }
-
-    return right(`${year}-${month}-${day}`);
+    return right(`${partMap.year}-${partMap.month}-${partMap.day}`);
   } catch {
     return left({
       code: 'INVALID_TIMEZONE',
@@ -398,9 +391,7 @@ export const selectQuestionForEmployeeMoment = (
   const recurringCandidates = eligibleQuestions
     .filter((question) => question.schedule.type === 'recurring' && isRecurringScheduleDueOnDate(question.schedule, localDate))
     .sort((a, b) => {
-      const intervalDelta = b.schedule.type === 'recurring' && a.schedule.type === 'recurring'
-        ? recurringPriority(b.schedule) - recurringPriority(a.schedule)
-        : 0;
+      const intervalDelta = recurringPriority(b.schedule) - recurringPriority(a.schedule);
 
       if (intervalDelta !== 0) {
         return intervalDelta;

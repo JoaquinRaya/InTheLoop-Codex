@@ -58,7 +58,8 @@ describe('employee daily prompt app wiring', () => {
       comment: noText(),
       versionInput,
       stateStore,
-      packagingPipelineSignal: null
+      packagingPipelineSignal: null,
+      anonymousSubmissionTransport: null
     });
 
     const secondLogin = runEmployeePromptLoginFlow('2026-03-22', profile, question, stateStore);
@@ -79,7 +80,14 @@ describe('employee daily prompt app wiring', () => {
       comment: someText('Everything went well'),
       versionInput,
       stateStore,
-      packagingPipelineSignal: 'ENCRYPTED_TRANSPORT_READY'
+      packagingPipelineSignal: 'ENCRYPTED_TRANSPORT_READY',
+      anonymousSubmissionTransport: {
+        encryptedPayload: 'cipher-1',
+        receivedAtEpochMs: 10,
+        transportMetadata: { route: 'submit' },
+        randomUnitInterval: 0.25,
+        delayConfig: { minDelayMs: 100, maxDelayMs: 500 }
+      }
     });
 
     expect(actionResult.packagingStatus).toBe('PACKAGED_AND_ENCRYPTED');
@@ -87,8 +95,34 @@ describe('employee daily prompt app wiring', () => {
     expect(actionResult.transparencyPanelHtml).toContain('data-component="transparency-panel"');
     expect(actionResult.transparencyPanelHtml).toContain('packaged and encrypted');
     expect(actionResult.nextState.lastAnsweredDay._tag).toBe('Some');
+    expect(actionResult.scheduledAnonymousSubmissionDelayMs).toBe(200);
   });
 
+  it('marks packaging as failed when delayed anonymous submission cannot be prepared', () => {
+    const stateStore = createInMemoryEmployeePromptStateStore();
+    runEmployeePromptLoginFlow('2026-03-22', profile, question, stateStore);
+
+    const actionResult = handleEmployeePromptAction({
+      localDay: '2026-03-22',
+      action: 'answered',
+      question,
+      selectedOptionId: someText('o-1'),
+      comment: noText(),
+      versionInput,
+      stateStore,
+      packagingPipelineSignal: null,
+      anonymousSubmissionTransport: {
+        encryptedPayload: '',
+        receivedAtEpochMs: 10,
+        transportMetadata: {},
+        randomUnitInterval: 0.25,
+        delayConfig: { minDelayMs: 100, maxDelayMs: 500 }
+      }
+    });
+
+    expect(actionResult.packagingStatus).toBe('NOT_PACKAGED');
+    expect(actionResult.responseValidationError).toContain('Encrypted payload must be present');
+  });
 
   it('maps explicit failed packaging pipeline signal to NOT_PACKAGED', () => {
     const stateStore = createInMemoryEmployeePromptStateStore();
@@ -102,7 +136,8 @@ describe('employee daily prompt app wiring', () => {
       comment: noText(),
       versionInput,
       stateStore,
-      packagingPipelineSignal: 'FAILED'
+      packagingPipelineSignal: 'FAILED',
+      anonymousSubmissionTransport: null
     });
 
     expect(actionResult.packagingStatus).toBe('NOT_PACKAGED');
@@ -120,7 +155,8 @@ describe('employee daily prompt app wiring', () => {
       comment: noText(),
       versionInput,
       stateStore,
-      packagingPipelineSignal: null
+      packagingPipelineSignal: null,
+      anonymousSubmissionTransport: null
     });
 
     expect(actionResult.packagingStatus).toBe('NOT_PACKAGED');

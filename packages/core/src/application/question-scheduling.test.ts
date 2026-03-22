@@ -66,6 +66,54 @@ describe('question scheduling', () => {
     }
   });
 
+
+
+  it('does not select recurring schedules before startDate or after endDate', () => {
+    const beforeStart = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-02-28T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-recurring-windowed',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-03-01',
+            endDate: '2026-03-31',
+            rule: { kind: 'interval-days', intervalDays: 7 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(beforeStart)).toBe(true);
+    if (isRight(beforeStart)) {
+      expect(beforeStart.right.question).toBeNull();
+    }
+
+    const afterEnd = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-04-01T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-recurring-windowed',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-03-01',
+            endDate: '2026-03-31',
+            rule: { kind: 'interval-days', intervalDays: 7 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(afterEnd)).toBe(true);
+    if (isRight(afterEnd)) {
+      expect(afterEnd.right.question).toBeNull();
+    }
+  });
+
   it('supports month-interval recurrence and clamps to month end when needed', () => {
     const selected = selectQuestionForEmployeeMoment(
       { timestampUtcIso: '2026-02-28T12:00:00.000Z', timeZone: 'UTC' },
@@ -86,6 +134,77 @@ describe('question scheduling', () => {
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
       expect(selected.right.question?.id).toBe('q-monthly');
+    }
+  });
+
+
+
+  it('does not select recurring candidates when nth weekday mismatches or interval-month cadence is not due', () => {
+    const nthMismatch = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-16T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-nth-mismatch',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-01-01',
+            rule: { kind: 'nth-weekday-of-month', nth: 3, weekday: 2 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(nthMismatch)).toBe(true);
+    if (isRight(nthMismatch)) {
+      expect(nthMismatch.right.question).toBeNull();
+    }
+
+    const intervalMonthsNotDue = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-02-28T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-interval-months-not-due',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-01-31',
+            rule: { kind: 'interval-months', intervalMonths: 2 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(intervalMonthsNotDue)).toBe(true);
+    if (isRight(intervalMonthsNotDue)) {
+      expect(intervalMonthsNotDue.right.question).toBeNull();
+    }
+  });
+
+
+
+  it('does not select last-weekday recurring rule when weekday does not match', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-24T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-last-weekday-mismatch',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-01-01',
+            rule: { kind: 'last-weekday-of-month', weekday: 3 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(selected)).toBe(true);
+    if (isRight(selected)) {
+      expect(selected.right.question).toBeNull();
     }
   });
 
@@ -194,6 +313,134 @@ describe('question scheduling', () => {
     }
   });
 
+
+
+  it('uses createdAt/id tie-breakers when recurring priority is equal', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-15T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-recurring-b',
+          createdAt: '2026-03-10T10:00:00.000Z',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-03-01',
+            rule: { kind: 'interval-days', intervalDays: 7 }
+          }
+        }),
+        baseQuestion({
+          id: 'q-recurring-a',
+          createdAt: '2026-03-11T10:00:00.000Z',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-03-01',
+            rule: { kind: 'interval-days', intervalDays: 7 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(selected)).toBe(true);
+    if (isRight(selected)) {
+      expect(selected.right.question?.id).toBe('q-recurring-a');
+    }
+  });
+
+  it('falls back to queue when no specific-date or recurring candidates are due', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-recurring-not-due',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-03-01',
+            rule: { kind: 'interval-days', intervalDays: 5 }
+          }
+        }),
+        baseQuestion({
+          id: 'q-queue-fallback',
+          createdAt: '2026-03-21T10:00:00.000Z',
+          schedule: { type: 'queue' }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(selected)).toBe(true);
+    if (isRight(selected)) {
+      expect(selected.right.question?.id).toBe('q-queue-fallback');
+      expect(selected.right.nextState.consumedQueueQuestionIds).toEqual(['q-queue-fallback']);
+    }
+  });
+
+
+
+  it('orders recurring candidates across interval-months, last-weekday, and nth-weekday priorities', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-25T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-interval-months',
+          createdAt: '2026-03-20T10:00:00.000Z',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-01-25',
+            rule: { kind: 'interval-months', intervalMonths: 1 }
+          }
+        }),
+        baseQuestion({
+          id: 'q-last-weekday',
+          createdAt: '2026-03-21T10:00:00.000Z',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-01-01',
+            rule: { kind: 'last-weekday-of-month', weekday: 3 }
+          }
+        }),
+        baseQuestion({
+          id: 'q-nth-weekday',
+          createdAt: '2026-03-22T10:00:00.000Z',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-01-01',
+            rule: { kind: 'nth-weekday-of-month', nth: 4, weekday: 3 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isRight(selected)).toBe(true);
+    if (isRight(selected)) {
+      expect(selected.right.question?.id).toBe('q-last-weekday');
+    }
+  });
+
+  it('rejects suppression windows with invalid date format', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-invalid-suppression-format',
+          schedule: { type: 'queue' },
+          suppressionWindows: [{ startDate: '2026/03/01', endDate: '2026-03-10' }]
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isLeft(selected)).toBe(true);
+    if (isLeft(selected)) {
+      expect(selected.left[0]?.code).toBe('INVALID_DATE_FORMAT');
+    }
+  });
+
   it('supports suppression windows and queue global consumption', () => {
     const initial = selectQuestionForEmployeeMoment(
       { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
@@ -266,6 +513,38 @@ describe('question scheduling', () => {
     }
   });
 
+
+
+  it('rejects invalid specific-date and recurring startDate formats', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-invalid-specific-date',
+          schedule: { type: 'specific-date', date: '03-22-2026' }
+        }),
+        baseQuestion({
+          id: 'q-invalid-recurring-start-date',
+          schedule: {
+            type: 'recurring',
+            startDate: '03-01-2026',
+            rule: { kind: 'interval-days', intervalDays: 7 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isLeft(selected)).toBe(true);
+    if (isLeft(selected)) {
+      expect(selected.left.map((error) => error.code)).toEqual([
+        'INVALID_DATE_FORMAT',
+        'INVALID_DATE_FORMAT'
+      ]);
+    }
+  });
+
   it('validates schedule metadata and rejects invalid configurations', () => {
     const selected = selectQuestionForEmployeeMoment(
       { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
@@ -304,6 +583,59 @@ describe('question scheduling', () => {
     }
   });
 
+
+
+  it('rejects invalid recurring endDate format and invalid nth weekday configuration', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
+      [
+        baseQuestion({
+          id: 'q-invalid-end-date-format',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-03-01',
+            endDate: '03-31-2026',
+            rule: { kind: 'interval-days', intervalDays: 7 }
+          }
+        }),
+        baseQuestion({
+          id: 'q-invalid-nth',
+          schedule: {
+            type: 'recurring',
+            startDate: '2026-03-01',
+            rule: { kind: 'nth-weekday-of-month', nth: 6, weekday: 1 }
+          }
+        })
+      ],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isLeft(selected)).toBe(true);
+    if (isLeft(selected)) {
+      expect(selected.left.map((error) => error.code)).toEqual([
+        'INVALID_DATE_FORMAT',
+        'INVALID_NTH_WEEKDAY'
+      ]);
+    }
+  });
+
+
+
+  it('returns INVALID_DATE_FORMAT for invalid UTC timestamp input', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: 'not-a-timestamp', timeZone: 'UTC' },
+      [baseQuestion({ id: 'q-specific', schedule: { type: 'specific-date', date: '2026-03-22' } })],
+      createEmptyQuestionSelectionState(),
+      workingDayPolicy
+    );
+
+    expect(isLeft(selected)).toBe(true);
+    if (isLeft(selected)) {
+      expect(selected.left[0]?.code).toBe('INVALID_DATE_FORMAT');
+    }
+  });
+
   it('returns a validation error for invalid timezone', () => {
     const selected = selectQuestionForEmployeeMoment(
       { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'Nope/Invalid' },
@@ -315,6 +647,41 @@ describe('question scheduling', () => {
     expect(isLeft(selected)).toBe(true);
     if (isLeft(selected)) {
       expect(selected.left[0]?.code).toBe('INVALID_TIMEZONE');
+    }
+  });
+
+
+
+  it('returns null question when all queue candidates are already consumed', () => {
+    const selected = selectQuestionForEmployeeMoment(
+      { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
+      [baseQuestion({ id: 'q-queue-1', schedule: { type: 'queue' } })],
+      { consumedQueueQuestionIds: ['q-queue-1'] },
+      workingDayPolicy
+    );
+
+    expect(isRight(selected)).toBe(true);
+    if (isRight(selected)) {
+      expect(selected.right.question).toBeNull();
+      expect(selected.right.nextState.consumedQueueQuestionIds).toEqual(['q-queue-1']);
+    }
+  });
+
+  it('returns selection validation errors without attempting persistence', () => {
+    const persisted = selectAndPersistQuestionForEmployeeMoment(
+      'tenant-a',
+      { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'Nope/Invalid' },
+      [baseQuestion({ id: 'q-specific', schedule: { type: 'specific-date', date: '2026-03-22' } })],
+      {
+        loadState: () => ({ state: createEmptyQuestionSelectionState(), version: 1 }),
+        saveState: () => right(2)
+      },
+      workingDayPolicy
+    );
+
+    expect(isLeft(persisted)).toBe(true);
+    if (isLeft(persisted)) {
+      expect(persisted.left[0]?.code).toBe('INVALID_TIMEZONE');
     }
   });
 
