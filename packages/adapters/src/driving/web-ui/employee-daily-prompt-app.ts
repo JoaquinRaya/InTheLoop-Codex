@@ -1,5 +1,8 @@
-import type { Either } from 'fp-ts/Either';
-import { none, some, type Option } from 'fp-ts/Option';
+/**
+ * Driving web-ui adapter that orchestrates PRD-02 prompt flows with core use cases.
+ */
+import type { Either } from '../../../../core/src/domain/either.js';
+import { none, some, type Option } from '../../../../core/src/domain/option.js';
 import {
   applyDailyPromptOutcome,
   createEmptyEmployeeClientLocalState,
@@ -7,6 +10,12 @@ import {
   type EmployeeClientLocalState,
   type EmployeeProfileSnapshot
 } from '../../../../core/src/application/employee-daily-prompt.js';
+import type { ForEmployeePromptLocalStateStorage } from '../../../../core/src/ports/driven/for-employee-prompt-local-state-storage.js';
+import type {
+  ForApplyingEmployeeDailyPromptOutcome,
+  ForResolvingEmployeeDailyPromptDecision
+} from '../../../../core/src/ports/driving/for-employee-daily-prompt.js';
+import type { ForCreatingUnlinkableSubmissionArtifacts } from '../../../../core/src/ports/driving/for-unlinkable-submission-artifacts.js';
 import {
   createUnlinkableSubmissionArtifacts,
   type CreateUnlinkableSubmissionArtifactsError,
@@ -22,6 +31,9 @@ import {
 import { createTransparencyPanelModel, type PackagingStatus } from './transparency-panel-model.js';
 import { renderTransparencyPanelComponent } from './transparency-panel-component.js';
 
+/**
+ * View-model input for a prompt question rendered to employees.
+ */
 export type EmployeePromptQuestion = Readonly<{
   readonly id: string;
   readonly text: string;
@@ -29,25 +41,45 @@ export type EmployeePromptQuestion = Readonly<{
   readonly commentEnabled: boolean;
 }>;
 
-export type EmployeePromptLocalStateStore = Readonly<{
-  readonly load: () => EmployeeClientLocalState;
-  readonly save: (state: EmployeeClientLocalState) => void;
-}>;
+/**
+ * Adapter-local alias for the driven state-storage port.
+ */
+export type EmployeePromptLocalStateStore = ForEmployeePromptLocalStateStorage;
 
+/**
+ * Result of the sign-in prompt decision/rendering flow.
+ */
 export type LoginFlowResult = Readonly<{
   readonly decision: ReturnType<typeof resolveLoginPromptDecision>;
   readonly promptComponentHtml: string | null;
 }>;
 
+/**
+ * Default driving-port binding for prompt decision resolution.
+ */
+const resolveDailyPromptDecisionPort: ForResolvingEmployeeDailyPromptDecision = resolveLoginPromptDecision;
+/**
+ * Default driving-port binding for prompt outcome application.
+ */
+const applyDailyPromptOutcomePort: ForApplyingEmployeeDailyPromptOutcome = applyDailyPromptOutcome;
+/**
+ * Default driving-port binding for unlinkable artifact generation.
+ */
+const createUnlinkableSubmissionArtifactsPort: ForCreatingUnlinkableSubmissionArtifacts =
+  createUnlinkableSubmissionArtifacts;
+
+/**
+ * Runs sign-in flow and returns prompt HTML when prompt is available.
+ */
 export const runEmployeePromptLoginFlow = (
   localDay: string,
   profile: EmployeeProfileSnapshot,
   question: EmployeePromptQuestion,
   stateStore: EmployeePromptLocalStateStore
 ): LoginFlowResult => {
-  const loadedState = stateStore.load();
-  const decision = resolveLoginPromptDecision(localDay, loadedState, profile);
-  stateStore.save(decision.nextState);
+  const loadedState = stateStore.loadState();
+  const decision = resolveDailyPromptDecisionPort(localDay, loadedState, profile);
+  stateStore.saveState(decision.nextState);
 
   if (!decision.shouldShowPrompt) {
     return {
@@ -73,8 +105,14 @@ export const runEmployeePromptLoginFlow = (
   };
 };
 
+/**
+ * Runtime signal from packaging/encryption pipeline.
+ */
 export type PackagingPipelineSignal = 'ENCRYPTED_TRANSPORT_READY' | 'UNAVAILABLE' | 'FAILED';
 
+/**
+ * Input contract for handling employee prompt actions.
+ */
 export type PromptActionInput = Readonly<{
   readonly localDay: string;
   readonly action: ParticipationPromptState;
@@ -86,6 +124,9 @@ export type PromptActionInput = Readonly<{
   readonly packagingPipelineSignal: PackagingPipelineSignal | null;
 }>;
 
+/**
+ * Result contract for handled prompt actions.
+ */
 export type PromptActionResult = Readonly<{
   readonly nextState: EmployeeClientLocalState;
   readonly packagingStatus: PackagingStatus;
@@ -93,6 +134,9 @@ export type PromptActionResult = Readonly<{
   readonly responseValidationError: string | null;
 }>;
 
+/**
+ * Builds a raw response payload from action input and cached profile context.
+ */
 const buildResponsePayload = (
   input: PromptActionInput,
   profile: EmployeeProfileSnapshot | null
@@ -121,6 +165,9 @@ const buildResponsePayload = (
   };
 };
 
+/**
+ * Produces unlinkable artifacts only for answered actions.
+ */
 const buildArtifactResult = (
   input: PromptActionInput,
   responsePayload: Readonly<Partial<Record<string, string | number>>>
@@ -129,7 +176,7 @@ const buildArtifactResult = (
     return null;
   }
 
-  return createUnlinkableSubmissionArtifacts({
+  return createUnlinkableSubmissionArtifactsPort({
     responsePayload,
     participationEvent: {
       participation_day: input.localDay,
@@ -138,6 +185,9 @@ const buildArtifactResult = (
   });
 };
 
+/**
+ * Maps packaging/runtime signals and artifact outcomes to a display status.
+ */
 const mapPackagingSignal = (
   artifactResult: Either<CreateUnlinkableSubmissionArtifactsError, CreateUnlinkableSubmissionArtifactsResult> | null,
   signal: PackagingPipelineSignal | null
@@ -155,8 +205,11 @@ const mapPackagingSignal = (
     : 'NOT_PACKAGED';
 };
 
+/**
+ * Handles answered/skipped/delayed prompt actions and returns transparency output.
+ */
 export const handleEmployeePromptAction = (input: PromptActionInput): PromptActionResult => {
-  const loadedState = input.stateStore.load();
+  const loadedState = input.stateStore.loadState();
 
   if (input.action === 'answered' && input.selectedOptionId._tag === 'None') {
     return {
@@ -174,8 +227,8 @@ export const handleEmployeePromptAction = (input: PromptActionInput): PromptActi
   const artifactResult = buildArtifactResult(input, responsePayload);
   const packagingStatus = mapPackagingSignal(artifactResult, input.packagingPipelineSignal);
 
-  const updatedState = applyDailyPromptOutcome(input.localDay, loadedState, input.action);
-  input.stateStore.save(updatedState);
+  const updatedState = applyDailyPromptOutcomePort(input.localDay, loadedState, input.action);
+  input.stateStore.saveState(updatedState);
 
   return {
     nextState: updatedState,
@@ -190,18 +243,27 @@ export const handleEmployeePromptAction = (input: PromptActionInput): PromptActi
   };
 };
 
+/**
+ * Creates in-memory implementation of the state-storage driven port.
+ */
 export const createInMemoryEmployeePromptStateStore = (
   initialState: EmployeeClientLocalState = createEmptyEmployeeClientLocalState()
 ): EmployeePromptLocalStateStore => {
   let currentState = initialState;
 
   return {
-    load: () => currentState,
-    save: (state) => {
+    loadState: () => currentState,
+    saveState: (state) => {
       currentState = state;
     }
   };
 };
 
+/**
+ * Convenience helper to create `Some<string>` for UI actions.
+ */
 export const someText = (value: string): Option<string> => some(value);
-export const noText = (): Option<string> => none;
+/**
+ * Convenience helper to create `None<string>` for UI actions.
+ */
+export const noText = (): Option<string> => none();

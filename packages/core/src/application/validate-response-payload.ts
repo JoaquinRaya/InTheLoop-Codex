@@ -1,6 +1,9 @@
-import { none, some } from 'fp-ts/Option';
-import type { Either } from 'fp-ts/Either';
-import { left, right } from 'fp-ts/Either';
+/**
+ * PRD-01 application service that validates and maps inbound response payloads.
+ */
+import { none, some } from '../domain/option.js';
+import type { Either } from '../domain/either.js';
+import { left, right } from '../domain/either.js';
 import {
   allowedResponseKeys,
   type PayloadValidationError,
@@ -17,9 +20,15 @@ const requiredKeys = [
   'survey_day'
 ] as const;
 
+/**
+ * Checks whether a raw payload key is allowlisted.
+ */
 const isAllowedKey = (key: string): boolean =>
   allowedResponseKeys.some((allowedKey) => allowedKey === key);
 
+/**
+ * Runtime guard that verifies required fields are present.
+ */
 const hasAllRequiredFields = (
   payload: Readonly<Partial<Record<(typeof allowedResponseKeys)[number], string | number>>>
 ): payload is Readonly<
@@ -27,11 +36,17 @@ const hasAllRequiredFields = (
     Record<(typeof requiredKeys)[number], string | number>
 > => requiredKeys.every((key) => payload[key] !== undefined);
 
+/**
+ * Creates a typed payload validation error.
+ */
 const error = (code: PayloadValidationError['code'], message: string): PayloadValidationError => ({
   code,
   message
 });
 
+/**
+ * Validates a raw payload against trust policy and maps to domain shape.
+ */
 export const validateResponsePayload = (
   payload: Readonly<Partial<Record<string, string | number>>>
 ): Either<PayloadValidationError, ResponsePayload> => {
@@ -73,7 +88,7 @@ export const validateResponsePayload = (
     optionalComment:
       typeof optionalCommentValue === 'string' && optionalCommentValue.length > 0
         ? some(optionalCommentValue)
-        : none,
+        : none(),
     managerEmail: String(payload.manager_email),
     role: String(payload.role),
     level: String(payload.level),
