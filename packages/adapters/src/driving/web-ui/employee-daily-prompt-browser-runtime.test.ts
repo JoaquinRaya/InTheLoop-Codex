@@ -64,7 +64,8 @@ describe('employee daily prompt browser runtime', () => {
       question,
       versionInput,
       stateStore,
-      packagingPipelineSignal: 'UNAVAILABLE'
+      packagingPipelineSignal: 'UNAVAILABLE',
+      anonymousSubmissionTransport: null
     });
 
     expect(skipped.packagingStatus).toBe('NOT_PACKAGED');

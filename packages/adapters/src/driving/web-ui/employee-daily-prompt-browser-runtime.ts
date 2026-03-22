@@ -8,7 +8,11 @@ import {
 } from './employee-daily-prompt-app.js';
 import type { EmployeePromptLocalStateStore } from './employee-daily-prompt-app.js';
 import type { VersionEndpointInput } from '../rest-api/version-endpoint.js';
-import { noText, type PromptActionInput } from './employee-daily-prompt-app.js';
+import {
+  noText,
+  type AnonymousSubmissionTransportInput,
+  type PromptActionInput
+} from './employee-daily-prompt-app.js';
 
 export type BrowserSignInInput = Readonly<{
   readonly isCompanyComputer: boolean;
@@ -57,6 +61,7 @@ export type BrowserPromptActionInput = Readonly<{
   readonly versionInput: VersionEndpointInput;
   readonly stateStore: EmployeePromptLocalStateStore;
   readonly packagingPipelineSignal: PackagingPipelineSignal | null;
+  readonly anonymousSubmissionTransport: AnonymousSubmissionTransportInput | null;
 }>;
 
 export const skipPromptInBrowserRuntime = (input: BrowserPromptActionInput): PromptActionResult =>
@@ -68,5 +73,6 @@ export const skipPromptInBrowserRuntime = (input: BrowserPromptActionInput): Pro
     comment: noText(),
     versionInput: input.versionInput,
     stateStore: input.stateStore,
-    packagingPipelineSignal: input.packagingPipelineSignal
+    packagingPipelineSignal: input.packagingPipelineSignal,
+    anonymousSubmissionTransport: input.anonymousSubmissionTransport
   } satisfies PromptActionInput);

@@ -10,6 +10,7 @@ export * from './application/create-unlinkable-submission.js';
 export * from './application/employee-daily-prompt.js';
 export * from './application/question-scheduling.js';
 export * from './application/work-calendar-policy.js';
+export * from './application/submission-pipeline.js';
 
 export * from './domain/option.js';
 export * from './domain/either.js';
