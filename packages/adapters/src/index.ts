@@ -12,3 +12,4 @@ export * from './driven/storage/versioned-question-selection-state-store.js';
 export * from './driving/web-ui/anonymous-submission-client.js';
 export * from './driven/storage/anonymous-submission-batch-processor.js';
 export * from './driving/rest-api/aggregation-analytics-contract.js';
+export * from './driving/rest-api/dashboard-analytics-contract.js';

@@ -12,6 +12,7 @@ export * from './application/question-scheduling.js';
 export * from './application/work-calendar-policy.js';
 export * from './application/submission-pipeline.js';
 export * from './application/aggregation-privacy-threshold.js';
+export * from './application/dashboard-analytics.js';
 
 export * from './domain/option.js';
 export * from './domain/either.js';
