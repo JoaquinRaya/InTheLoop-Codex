@@ -3,6 +3,8 @@
 This repository now ships a deployable Fastify runtime in:
 
 - `packages/adapters/src/runtime/server.ts`
+- desktop one-shot login client runtime entrypoint:
+  - `packages/adapters/src/runtime/desktop-login-client.ts`
 
 ## Runtime contract
 
@@ -18,6 +20,17 @@ Required environment variables:
 pnpm install
 pnpm -r build
 DATABASE_URL=postgres://in_the_loop:in_the_loop@localhost:5432/in_the_loop pnpm --filter @in-the-loop/adapters start
+```
+
+Run desktop login client (one-shot mode):
+
+```bash
+ITL_API_BASE_URL=http://127.0.0.1:3000 \
+ITL_TENANT_ID=tenant-a \
+ITL_MANAGER_EMAIL=lead@example.com \
+ITL_ROLE=ic \
+ITL_LEVEL=l3 \
+pnpm --filter @in-the-loop/adapters start:desktop-login
 ```
 
 ## Docker Compose (recommended quickstart)
@@ -50,6 +63,11 @@ Coverage in `tests/e2e/runtime-cujs.e2e.test.ts` includes:
 Additional browser + real-Postgres path:
 
 - `tests/e2e/runtime-browser-postgres.e2e.test.ts` boots a real PostgreSQL instance (`initdb`/`pg_ctl`) and drives the runtime through the actual runtime UI page (`/ui`) with Playwright.
+- `tests/e2e/desktop-login-client-postgres.e2e.test.ts` boots real PostgreSQL + runtime server, runs the desktop login client as a process, interacts with prompt UI, and verifies persisted `response_scores` rows.
+
+## Runtime verification endpoint
+
+- `GET /version` exposes build/version/provenance hashes and attestation status for trust/transparency surfaces.
 
 ## API sequence for first question delivery
 
