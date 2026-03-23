@@ -114,6 +114,7 @@ The design in this repository follows a **TypeScript-only monorepo** with **hexa
 Based on implementation status documents and test outcomes:
 
 - PRD-01 through PRD-10 are represented by dedicated core/adapters modules and status documents.
+- PRD-11 (login-triggered thin client) now has initial one-shot adapter flow implementation and tests; installer/startup registration and desktop packaging work remains.
 - Core anonymity, thresholding, scheduling, prompt, admin authoring, dashboard analytics, and trust disclosure paths are implemented and tested.
 - Remaining production gaps are primarily operational:
   - external audit/independent review process,

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=In The Loop Desktop Login
+Comment=Runs the In The Loop login-triggered survey client
+Exec=/opt/in-the-loop/InTheLoop --login-run
+Terminal=false
+X-GNOME-Autostart-enabled=true

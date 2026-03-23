@@ -27,7 +27,7 @@ Contains 5 tracked source/documentation/config file(s).
 - `docs/artifacts/TRUST_BOUNDARIES.md` — definitions: primarily types/tests/docs/config.
 
 ### `docs/engineering`
-Contains 13 tracked source/documentation/config file(s).
+Contains 14 tracked source/documentation/config file(s).
 - `docs/engineering/DEPLOYMENT_RUNBOOK.md` — definitions: primarily types/tests/docs/config.
 - `docs/engineering/IMPLEMENTATION_GUARDRAILS.md` — definitions: primarily types/tests/docs/config.
 - `docs/engineering/MONOREPO_TECH_SPEC.md` — definitions: primarily types/tests/docs/config.
@@ -41,9 +41,10 @@ Contains 13 tracked source/documentation/config file(s).
 - `docs/engineering/PRD-08_IMPLEMENTATION_STATUS.md` — definitions: primarily types/tests/docs/config.
 - `docs/engineering/PRD-09_IMPLEMENTATION_STATUS.md` — definitions: primarily types/tests/docs/config.
 - `docs/engineering/PRD-10_IMPLEMENTATION_STATUS.md` — definitions: primarily types/tests/docs/config.
+- `docs/engineering/PRD-11_IMPLEMENTATION_STATUS.md` — definitions: primarily types/tests/docs/config.
 
 ### `docs/prds`
-Contains 10 tracked source/documentation/config file(s).
+Contains 11 tracked source/documentation/config file(s).
 - `docs/prds/PRD-01-Trust-And-Anonymity-Foundation.md` — definitions: primarily types/tests/docs/config.
 - `docs/prds/PRD-02-Employee-Client.md` — definitions: primarily types/tests/docs/config.
 - `docs/prds/PRD-03-Question-And-Scheduling.md` — definitions: primarily types/tests/docs/config.
@@ -54,11 +55,28 @@ Contains 10 tracked source/documentation/config file(s).
 - `docs/prds/PRD-08-Verification-And-Transparency.md` — definitions: primarily types/tests/docs/config.
 - `docs/prds/PRD-09-Practical-Anonymity-Protocol.md` — definitions: primarily types/tests/docs/config.
 - `docs/prds/PRD-10-Strong-Anonymity-Protocol.md` — definitions: primarily types/tests/docs/config.
+- `docs/prds/PRD-11-Login-Triggered-Thin-Client.md` — definitions: primarily types/tests/docs/config.
 
 ### `packages/adapters`
 Contains 2 tracked source/documentation/config file(s).
 - `packages/adapters/package.json` — definitions: primarily types/tests/docs/config.
 - `packages/adapters/tsconfig.json` — definitions: primarily types/tests/docs/config.
+
+### `packages/adapters/installers`
+Contains 1 tracked source/documentation/config file(s).
+- `packages/adapters/installers/README.md` — definitions: primarily types/tests/docs/config.
+
+### `packages/adapters/installers/linux`
+Contains 1 tracked source/documentation/config file(s).
+- `packages/adapters/installers/linux/in-the-loop-desktop-login.desktop` — definitions: primarily types/tests/docs/config.
+
+### `packages/adapters/installers/macos`
+Contains 1 tracked source/documentation/config file(s).
+- `packages/adapters/installers/macos/com.in_the_loop.desktop_login.plist` — definitions: primarily types/tests/docs/config.
+
+### `packages/adapters/installers/windows`
+Contains 1 tracked source/documentation/config file(s).
+- `packages/adapters/installers/windows/register-startup.ps1` — definitions: primarily types/tests/docs/config.
 
 ### `packages/adapters/src`
 Contains 1 tracked source/documentation/config file(s).
@@ -89,6 +107,11 @@ Contains 10 tracked source/documentation/config file(s).
 - `packages/adapters/src/driving/rest-api/version-endpoint.test.ts` — definitions: primarily types/tests/docs/config.
 - `packages/adapters/src/driving/rest-api/version-endpoint.ts` — functions/constants: createReducedAssuranceDisclosure, toRuntimeSignals, toAttestationExplanation, buildVersionEndpointResponse; exports: VersionEndpointInput, VersionEndpointResponse, buildVersionEndpointResponse
 
+### `packages/adapters/src/driving/desktop-login`
+Contains 2 tracked source/documentation/config file(s).
+- `packages/adapters/src/driving/desktop-login/login-triggered-thin-client.test.ts` — definitions: primarily types/tests/docs/config.
+- `packages/adapters/src/driving/desktop-login/login-triggered-thin-client.ts` — functions/constants: runLoginTriggeredThinClient; exports: ThinClientFetchResult, ThinClientUserAction, ThinClientSubmissionInput, ThinClientSubmissionResult, ThinClientLaunchResult, LoginTriggeredThinClientInput, runLoginTriggeredThinClient
+
 ### `packages/adapters/src/driving/web-ui`
 Contains 16 tracked source/documentation/config file(s).
 - `packages/adapters/src/driving/web-ui/anonymous-submission-client.test.ts` — definitions: primarily types/tests/docs/config.
@@ -109,7 +132,8 @@ Contains 16 tracked source/documentation/config file(s).
 - `packages/adapters/src/driving/web-ui/transparency-panel-model.ts` — functions/constants: toPackagingStatusLabel, createTransparencyPanelModel; exports: PackagingStatus, TransparencyPanelModel, createTransparencyPanelModel
 
 ### `packages/adapters/src/runtime`
-Contains 4 tracked source/documentation/config file(s).
+Contains 5 tracked source/documentation/config file(s).
+- `packages/adapters/src/runtime/desktop-login-client.ts` — functions/constants: parseCsv, requiredEnv, toFetchFailure, fetchJson, normalizePromptOptions, run; exports: run
 - `packages/adapters/src/runtime/in-memory-runtime-store.ts` — functions/constants: createInMemoryRuntimeStore; exports: createInMemoryRuntimeStore
 - `packages/adapters/src/runtime/postgres-runtime-store.ts` — classes: PostgresRuntimeStore; functions/constants: parseQuestion, parseState, toAdminAuthoringProfile; exports: PostgresRuntimeStore, PromptRequestProfileInput, toAdminAuthoringProfile
 - `packages/adapters/src/runtime/runtime-store.ts` — exports: RuntimeStore
@@ -190,7 +214,8 @@ Contains 1 tracked source/documentation/config file(s).
 - `packages/shared/src/index.ts` — exports: sharedPackageMarker
 
 ### `tests/e2e`
-Contains 2 tracked source/documentation/config file(s).
+Contains 3 tracked source/documentation/config file(s).
+- `tests/e2e/desktop-login-client-postgres.e2e.test.ts` — definitions: primarily types/tests/docs/config.
 - `tests/e2e/runtime-browser-postgres.e2e.test.ts` — functions/constants: toJson, runPostgresCommand
 - `tests/e2e/runtime-cujs.e2e.test.ts` — definitions: primarily types/tests/docs/config.
 

@@ -7,7 +7,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/adapters/src/runtime/server.js"
+    "start": "node dist/adapters/src/runtime/server.js",
+    "start:desktop-login": "node dist/adapters/src/runtime/desktop-login-client.js"
   },
   "dependencies": {
     "fastify": "4.29.1",

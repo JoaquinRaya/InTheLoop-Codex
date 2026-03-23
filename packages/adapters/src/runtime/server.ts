@@ -4,6 +4,7 @@ import {
   parseAdminAuthoringPreviewInput,
   parseAndValidateAdminAuthoringBatch
 } from '../driving/rest-api/admin-authoring-contract.js';
+import { buildVersionEndpointResponse, type VersionEndpointInput } from '../driving/rest-api/version-endpoint.js';
 import {
   createTenantWorkCalendarPolicy,
   previewQuestionResolutionForEmployee,
@@ -60,6 +61,40 @@ type CountEntry<TKey extends string> = Readonly<{
   readonly key: TKey;
   readonly count: number;
 }>;
+
+const parseRuntimeAttestationStatus = (
+  value: string | undefined
+): VersionEndpointInput['runtimeAttestationStatus'] => {
+  if (value === 'FAILED') {
+    return 'FAILED';
+  }
+
+  if (value === 'UNAVAILABLE') {
+    return 'UNAVAILABLE';
+  }
+
+  return 'VERIFIED';
+};
+
+const versionEndpointInputFromEnv = (): VersionEndpointInput => ({
+  commitHash: process.env.RUNTIME_COMMIT_HASH ?? 'unknown-commit',
+  buildHash: process.env.RUNTIME_BUILD_HASH ?? 'sha256:unknown-build',
+  expectedBuildHash: process.env.RUNTIME_EXPECTED_BUILD_HASH ?? process.env.RUNTIME_BUILD_HASH ?? 'sha256:unknown-build',
+  buildTime: process.env.RUNTIME_BUILD_TIME ?? 'unknown-build-time',
+  configSchemaVersion: process.env.RUNTIME_CONFIG_SCHEMA_VERSION ?? 'unknown-schema',
+  sourceRepositoryUrl: process.env.RUNTIME_SOURCE_REPOSITORY_URL ?? 'https://example.com/repo',
+  reproducibleBuildInstructionsUrl:
+    process.env.RUNTIME_REPRODUCIBLE_BUILD_INSTRUCTIONS_URL ?? 'https://example.com/repo/blob/main/README.md',
+  runtimeAttestationStatus: parseRuntimeAttestationStatus(process.env.RUNTIME_ATTESTATION_STATUS),
+  publishedArtifactHashes: {
+    serverBinaryHash: process.env.RUNTIME_SERVER_BINARY_HASH ?? 'sha256:unknown-server-binary',
+    policyHash: process.env.RUNTIME_POLICY_HASH ?? 'sha256:unknown-policy',
+    buildProvenanceHash: process.env.RUNTIME_BUILD_PROVENANCE_HASH ?? 'sha256:unknown-provenance'
+  },
+  ...(process.env.RUNTIME_ATTESTATION_REPORT_DOWNLOAD_URL === undefined
+    ? {}
+    : { attestationReportDownloadUrl: process.env.RUNTIME_ATTESTATION_REPORT_DOWNLOAD_URL })
+});
 
 const workCalendarPolicy: ForWorkCalendarPolicy = createTenantWorkCalendarPolicy({
   workingWeekdays: [1, 2, 3, 4, 5],
@@ -170,6 +205,8 @@ export const createServer = async (
   const effectiveCalendarPolicy = input.workCalendarPolicy ?? workCalendarPolicy;
 
   fastify.get('/health', async () => ({ status: 'ok' }));
+
+  fastify.get('/version', async () => buildVersionEndpointResponse(versionEndpointInputFromEnv()));
 
   fastify.get('/ui', async (_request, reply) =>
     reply.type('text/html').send(renderAdminUiPage())

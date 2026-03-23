@@ -12,7 +12,7 @@ To maximize user verifiability and reduce audit complexity, the system should be
 
 ## Structure
 
-- `prds/PRD-01` … `PRD-10`: feature-scoped PRDs
+- `prds/PRD-01` … `PRD-11`: feature-scoped PRDs
 - `artifacts/`: cross-cutting security/trust artifacts
 - `engineering/`: implementation guardrails, monorepo specs, and TDD rules
   - deployment runbook: `engineering/DEPLOYMENT_RUNBOOK.md`

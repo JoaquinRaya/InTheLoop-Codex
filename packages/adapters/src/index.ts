@@ -10,6 +10,7 @@ export {
   type StorageLike as BrowserLocalStateStorageLike
 } from './driving/web-ui/browser-local-state-store.js';
 export * from './driving/web-ui/employee-daily-prompt-browser-runtime.js';
+export * from './driving/desktop-login/login-triggered-thin-client.js';
 export * from './driving/rest-api/question-authoring-contract.js';
 export {
   createVersionedQuestionSelectionStateStore,
