@@ -20,7 +20,13 @@ describe('createTransparencyPanelModel', () => {
         configSchemaVersion: 'v1',
         sourceRepositoryUrl: 'https://example.com/repo',
         reproducibleBuildInstructionsUrl: 'https://example.com/repo/build.md',
-        runtimeAttestationStatus: 'VERIFIED'
+        runtimeAttestationStatus: 'VERIFIED',
+        publishedArtifactHashes: {
+          serverBinaryHash: 'sha256:binary123',
+          policyHash: 'sha256:policy123',
+          buildProvenanceHash: 'sha256:provenance123'
+        },
+        attestationReportDownloadUrl: 'https://example.com/attestation/report.json'
       },
       'PACKAGED_AND_ENCRYPTED'
     );
@@ -33,9 +39,21 @@ describe('createTransparencyPanelModel', () => {
     expect(model.serverVersion).toEqual({
       commitHash: 'a'.repeat(40),
       buildHash: 'sha256:abc123',
-      runtimeAttestationStatus: 'VERIFIED'
+      expectedBuildHash: 'sha256:abc123',
+      buildHashMatchesExpected: true,
+      runtimeAttestationStatus: 'VERIFIED',
+      publishedArtifactHashes: {
+        serverBinaryHash: 'sha256:binary123',
+        policyHash: 'sha256:policy123',
+        buildProvenanceHash: 'sha256:provenance123'
+      }
     });
     expect(model.sourceRepositoryUrl).toBe('https://example.com/repo');
+    expect(model.reproducibleBuildInstructionsUrl).toBe('https://example.com/repo/build.md');
+    expect(model.attestationReportDownloadUrl).toBe('https://example.com/attestation/report.json');
+    expect(model.attestationExplanation).toContain('verified');
+    expect(model.anonymityGuaranteeStatement).toContain('computationally infeasible');
+    expect(model.trustAssumptions).toHaveLength(3);
   });
 
   it('shows rejected payload preview text when trust policy validation fails', () => {
@@ -51,7 +69,12 @@ describe('createTransparencyPanelModel', () => {
         configSchemaVersion: 'v1',
         sourceRepositoryUrl: 'https://example.com/repo',
         reproducibleBuildInstructionsUrl: 'https://example.com/repo/build.md',
-        runtimeAttestationStatus: 'VERIFIED'
+        runtimeAttestationStatus: 'VERIFIED',
+        publishedArtifactHashes: {
+          serverBinaryHash: 'sha256:binary123',
+          policyHash: 'sha256:policy123',
+          buildProvenanceHash: 'sha256:provenance123'
+        }
       },
       'NOT_PACKAGED'
     );

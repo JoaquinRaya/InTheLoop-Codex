@@ -28,7 +28,7 @@ export type IntervalMonthsRecurringRule = Readonly<{
 
 export type NthWeekdayOfMonthRecurringRule = Readonly<{
   readonly kind: 'nth-weekday-of-month';
-  readonly nth: 1 | 2 | 3 | 4 | 5;
+  readonly nth: number;
   readonly weekday: Weekday;
 }>;
 
@@ -112,7 +112,9 @@ const isDateWithinRange = (date: string, range: DateRange): boolean => date >= r
 const isSuppressedOnDate = (question: ScheduledQuestion, localDate: string): boolean =>
   (question.suppressionWindows ?? []).some((range) => isDateWithinRange(localDate, range));
 
-const parseDateParts = (isoDate: string): Readonly<{ year: number; month: number; day: number }> => ({
+const parseDateParts = (
+  isoDate: string
+): Readonly<{ readonly year: number; readonly month: number; readonly day: number }> => ({
   year: Number.parseInt(isoDate.slice(0, 4), 10),
   month: Number.parseInt(isoDate.slice(5, 7), 10),
   day: Number.parseInt(isoDate.slice(8, 10), 10)
@@ -167,7 +169,7 @@ const isLastWeekdayOfMonth = (localDate: string, weekday: Weekday): boolean => {
   return nextWeek.getUTCMonth() !== current.getUTCMonth();
 };
 
-const isNthWeekdayOfMonth = (localDate: string, nth: 1 | 2 | 3 | 4 | 5, weekday: Weekday): boolean => {
+const isNthWeekdayOfMonth = (localDate: string, nth: number, weekday: Weekday): boolean => {
   if (weekdayFromDate(localDate) !== weekday) {
     return false;
   }
@@ -244,7 +246,23 @@ const recurringPriority = (schedule: RecurringSchedule): number => {
   return schedule.rule.nth * 7;
 };
 
-const validateDateRange = (range: DateRange, questionId: string): QuestionSchedulingValidationError[] => {
+type RecurringScheduledQuestion = ScheduledQuestion & Readonly<{ readonly schedule: RecurringSchedule }>;
+type SpecificDateScheduledQuestion = ScheduledQuestion & Readonly<{ readonly schedule: SpecificDateSchedule }>;
+type QueueScheduledQuestion = ScheduledQuestion & Readonly<{ readonly schedule: QueueSchedule }>;
+
+const isRecurringScheduledQuestion = (question: ScheduledQuestion): question is RecurringScheduledQuestion =>
+  question.schedule.type === 'recurring';
+
+const isSpecificDateScheduledQuestion = (question: ScheduledQuestion): question is SpecificDateScheduledQuestion =>
+  question.schedule.type === 'specific-date';
+
+const isQueueScheduledQuestion = (question: ScheduledQuestion): question is QueueScheduledQuestion =>
+  question.schedule.type === 'queue';
+
+const validateDateRange = (
+  range: DateRange,
+  questionId: string
+): readonly QuestionSchedulingValidationError[] => {
   if (!isDateString(range.startDate) || !isDateString(range.endDate)) {
     return [{
       code: 'INVALID_DATE_FORMAT',
@@ -267,71 +285,86 @@ const validateDateRange = (range: DateRange, questionId: string): QuestionSchedu
 export const validateQuestionSchedules = (
   questions: readonly ScheduledQuestion[]
 ): Either<readonly QuestionSchedulingValidationError[], readonly ScheduledQuestion[]> => {
-  const errors: QuestionSchedulingValidationError[] = [];
+  const errors = questions.flatMap((question) => {
+    const specificDateErrors =
+      question.schedule.type === 'specific-date' && !isDateString(question.schedule.date)
+        ? [
+            {
+              code: 'INVALID_DATE_FORMAT' as const,
+              questionId: question.id,
+              message: 'Specific-date schedule requires an ISO yyyy-mm-dd date.'
+            }
+          ]
+        : [];
 
-  for (const question of questions) {
-    if (question.schedule.type === 'specific-date' && !isDateString(question.schedule.date)) {
-      errors.push({
-        code: 'INVALID_DATE_FORMAT',
-        questionId: question.id,
-        message: 'Specific-date schedule requires an ISO yyyy-mm-dd date.'
-      });
-    }
+    const recurringErrors =
+      question.schedule.type !== 'recurring'
+        ? []
+        : [
+            ...(!isDateString(question.schedule.startDate)
+              ? [
+                  {
+                    code: 'INVALID_DATE_FORMAT' as const,
+                    questionId: question.id,
+                    message: 'Recurring schedule requires an ISO yyyy-mm-dd startDate.'
+                  }
+                ]
+              : []),
+            ...(question.schedule.endDate === undefined
+              ? []
+              : !isDateString(question.schedule.endDate)
+                ? [
+                    {
+                      code: 'INVALID_DATE_FORMAT' as const,
+                      questionId: question.id,
+                      message: 'Recurring schedule endDate must be ISO yyyy-mm-dd when provided.'
+                    }
+                  ]
+                : question.schedule.endDate < question.schedule.startDate
+                  ? [
+                      {
+                        code: 'INVALID_DATE_RANGE' as const,
+                        questionId: question.id,
+                        message: 'Recurring schedule endDate cannot be before startDate.'
+                      }
+                    ]
+                  : []),
+            ...(question.schedule.rule.kind === 'interval-days' && question.schedule.rule.intervalDays < 1
+              ? [
+                  {
+                    code: 'INVALID_INTERVAL_DAYS' as const,
+                    questionId: question.id,
+                    message: 'intervalDays must be at least 1.'
+                  }
+                ]
+              : []),
+            ...(question.schedule.rule.kind === 'interval-months' && question.schedule.rule.intervalMonths < 1
+              ? [
+                  {
+                    code: 'INVALID_INTERVAL_MONTHS' as const,
+                    questionId: question.id,
+                    message: 'intervalMonths must be at least 1.'
+                  }
+                ]
+              : []),
+            ...(question.schedule.rule.kind === 'nth-weekday-of-month' &&
+            (question.schedule.rule.nth < 1 || question.schedule.rule.nth > 5)
+              ? [
+                  {
+                    code: 'INVALID_NTH_WEEKDAY' as const,
+                    questionId: question.id,
+                    message: 'nth-weekday-of-month requires nth in [1..5].'
+                  }
+                ]
+              : [])
+          ];
 
-    if (question.schedule.type === 'recurring') {
-      if (!isDateString(question.schedule.startDate)) {
-        errors.push({
-          code: 'INVALID_DATE_FORMAT',
-          questionId: question.id,
-          message: 'Recurring schedule requires an ISO yyyy-mm-dd startDate.'
-        });
-      }
+    const suppressionWindowErrors = (question.suppressionWindows ?? []).flatMap((window) =>
+      validateDateRange(window, question.id)
+    );
 
-      if (question.schedule.endDate !== undefined) {
-        if (!isDateString(question.schedule.endDate)) {
-          errors.push({
-            code: 'INVALID_DATE_FORMAT',
-            questionId: question.id,
-            message: 'Recurring schedule endDate must be ISO yyyy-mm-dd when provided.'
-          });
-        } else if (question.schedule.endDate < question.schedule.startDate) {
-          errors.push({
-            code: 'INVALID_DATE_RANGE',
-            questionId: question.id,
-            message: 'Recurring schedule endDate cannot be before startDate.'
-          });
-        }
-      }
-
-      if (question.schedule.rule.kind === 'interval-days' && question.schedule.rule.intervalDays < 1) {
-        errors.push({
-          code: 'INVALID_INTERVAL_DAYS',
-          questionId: question.id,
-          message: 'intervalDays must be at least 1.'
-        });
-      }
-
-      if (question.schedule.rule.kind === 'interval-months' && question.schedule.rule.intervalMonths < 1) {
-        errors.push({
-          code: 'INVALID_INTERVAL_MONTHS',
-          questionId: question.id,
-          message: 'intervalMonths must be at least 1.'
-        });
-      }
-
-      if (question.schedule.rule.kind === 'nth-weekday-of-month' && (question.schedule.rule.nth < 1 || question.schedule.rule.nth > 5)) {
-        errors.push({
-          code: 'INVALID_NTH_WEEKDAY',
-          questionId: question.id,
-          message: 'nth-weekday-of-month requires nth in [1..5].'
-        });
-      }
-    }
-
-    for (const window of question.suppressionWindows ?? []) {
-      errors.push(...validateDateRange(window, question.id));
-    }
-  }
+    return [...specificDateErrors, ...recurringErrors, ...suppressionWindowErrors];
+  });
 
   if (errors.length > 0) {
     return left(errors);
@@ -376,12 +409,14 @@ export const selectQuestionForEmployeeMoment = (
   const eligibleQuestions = validatedQuestions.right.filter((question) => !isSuppressedOnDate(question, localDate));
 
   const specificDateCandidates = eligibleQuestions
-    .filter((question) => question.schedule.type === 'specific-date' && question.schedule.date === localDate)
+    .filter(isSpecificDateScheduledQuestion)
+    .filter((question) => question.schedule.date === localDate)
     .sort(byMostRecentCreatedAtThenAlphabeticalId);
+  const [selectedSpecificDateQuestion] = specificDateCandidates;
 
-  if (specificDateCandidates.length > 0) {
+  if (selectedSpecificDateQuestion !== undefined) {
     return right({
-      question: specificDateCandidates[0],
+      question: selectedSpecificDateQuestion,
       nextState: state,
       localDate,
       timeZone: context.timeZone
@@ -389,7 +424,8 @@ export const selectQuestionForEmployeeMoment = (
   }
 
   const recurringCandidates = eligibleQuestions
-    .filter((question) => question.schedule.type === 'recurring' && isRecurringScheduleDueOnDate(question.schedule, localDate))
+    .filter(isRecurringScheduledQuestion)
+    .filter((question) => isRecurringScheduleDueOnDate(question.schedule, localDate))
     .sort((a, b) => {
       const intervalDelta = recurringPriority(b.schedule) - recurringPriority(a.schedule);
 
@@ -399,10 +435,11 @@ export const selectQuestionForEmployeeMoment = (
 
       return byMostRecentCreatedAtThenAlphabeticalId(a, b);
     });
+  const [selectedRecurringQuestion] = recurringCandidates;
 
-  if (recurringCandidates.length > 0) {
+  if (selectedRecurringQuestion !== undefined) {
     return right({
-      question: recurringCandidates[0],
+      question: selectedRecurringQuestion,
       nextState: state,
       localDate,
       timeZone: context.timeZone
@@ -411,10 +448,11 @@ export const selectQuestionForEmployeeMoment = (
 
   const consumedSet = new Set(state.consumedQueueQuestionIds);
   const queueCandidates = eligibleQuestions
-    .filter((question) => question.schedule.type === 'queue' && !consumedSet.has(question.id))
+    .filter(isQueueScheduledQuestion)
+    .filter((question) => !consumedSet.has(question.id))
     .sort(byMostRecentCreatedAtThenAlphabeticalId);
-
-  if (queueCandidates.length === 0) {
+  const [selectedQueueQuestion] = queueCandidates;
+  if (selectedQueueQuestion === undefined) {
     return right({
       question: null,
       nextState: state,
@@ -422,8 +460,6 @@ export const selectQuestionForEmployeeMoment = (
       timeZone: context.timeZone
     });
   }
-
-  const selectedQueueQuestion = queueCandidates[0];
 
   return right({
     question: selectedQueueQuestion,

@@ -67,11 +67,15 @@ export const parseAndValidateAdminAuthoringBatch = (
   }
 
   return right(
-    scheduleValidated.right.map((question, index) => ({
-      ...question,
-      target: toAudienceTarget(payload.questions[index]!.target),
-      firstDisplayedAt: payload.questions[index]!.first_displayed_at
-    }))
+    scheduleValidated.right.map((question, index) => {
+      const firstDisplayedAt = payload.questions[index]!.first_displayed_at;
+
+      return {
+        ...question,
+        target: toAudienceTarget(payload.questions[index]!.target),
+        ...(firstDisplayedAt === undefined ? {} : { firstDisplayedAt })
+      };
+    })
   );
 };
 
@@ -85,7 +89,9 @@ export const parseAdminAuthoringPreviewInput = (
   timestampUtcIso: payload.timestamp_utc_iso,
   timeZone: payload.time_zone,
   profile: {
-    managerEmail: payload.profile.manager_email,
+    ...(payload.profile.manager_email === undefined
+      ? {}
+      : { managerEmail: payload.profile.manager_email }),
     managerAncestryEmails: payload.profile.manager_ancestry_emails,
     groupIds: payload.profile.group_ids
   }

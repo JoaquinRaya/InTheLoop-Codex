@@ -12,9 +12,23 @@ describe('renderTransparencyPanelComponent', () => {
       serverVersion: {
         commitHash: 'a'.repeat(40),
         buildHash: 'sha256:abc123',
+        expectedBuildHash: 'sha256:abc123',
+        buildHashMatchesExpected: true,
+        publishedArtifactHashes: {
+          serverBinaryHash: 'sha256:binary123',
+          policyHash: 'sha256:policy123',
+          buildProvenanceHash: 'sha256:provenance123'
+        },
         runtimeAttestationStatus: 'VERIFIED'
       },
-      sourceRepositoryUrl: 'https://example.com/repo'
+      sourceRepositoryUrl: 'https://example.com/repo',
+      reproducibleBuildInstructionsUrl: 'https://example.com/repo/build.md',
+      attestationExplanation:
+        'Runtime attestation verified: measured runtime matches published artifact policy.',
+      attestationReportDownloadUrl: 'https://example.com/attestation/report.json',
+      anonymityGuaranteeStatement:
+        'Response unlinkability is computationally infeasible when trust assumptions hold.',
+      trustAssumptions: ['a', 'b', 'c']
     });
 
     expect(html).toContain('data-component="transparency-panel"');
@@ -22,6 +36,10 @@ describe('renderTransparencyPanelComponent', () => {
     expect(html).toContain('HIGH_ASSURANCE');
     expect(html).toContain('sha256:abc123');
     expect(html).toContain('https://example.com/repo');
+    expect(html).toContain('expected-build-hash');
+    expect(html).toContain('attestation-report-download');
+    expect(html).toContain('anonymity-guarantee');
+    expect(html).toContain('trust-assumptions');
     expect(html).toContain('outbound-payload-preview');
     expect(html).not.toContain('reduced-assurance-disclosure');
   });
@@ -36,9 +54,22 @@ describe('renderTransparencyPanelComponent', () => {
       serverVersion: {
         commitHash: 'a'.repeat(40),
         buildHash: 'sha256:abc123',
+        expectedBuildHash: 'sha256:def456',
+        buildHashMatchesExpected: false,
+        publishedArtifactHashes: {
+          serverBinaryHash: 'sha256:binary123',
+          policyHash: 'sha256:policy123',
+          buildProvenanceHash: 'sha256:provenance123'
+        },
         runtimeAttestationStatus: 'FAILED'
       },
-      sourceRepositoryUrl: 'https://example.com/repo'
+      sourceRepositoryUrl: 'https://example.com/repo',
+      reproducibleBuildInstructionsUrl: 'https://example.com/repo/build.md',
+      attestationExplanation: 'Runtime attestation failed.',
+      attestationReportDownloadUrl: null,
+      anonymityGuaranteeStatement:
+        'Response unlinkability is computationally infeasible when trust assumptions hold.',
+      trustAssumptions: ['a', 'b', 'c']
     });
 
     expect(html).toContain('REDUCED_ASSURANCE');

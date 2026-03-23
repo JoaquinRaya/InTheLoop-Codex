@@ -79,20 +79,25 @@ const toScheduledQuestion = (input: AuthoringQuestionInput): ScheduledQuestion =
   options: input.options,
   points: input.points,
   allowComments: input.allow_comments,
-  schedule: input.schedule.type === 'specific_date'
-    ? { type: 'specific-date', date: input.schedule.date }
-    : input.schedule.type === 'queue'
-      ? { type: 'queue' }
-      : {
-          type: 'recurring',
-          startDate: input.schedule.start_date,
-          endDate: input.schedule.end_date,
-          rule: toRecurringRule(input.schedule.rule)
-        },
-  suppressionWindows: input.suppression_windows?.map((window) => ({
-    startDate: window.start_date,
-    endDate: window.end_date
-  }))
+  schedule:
+    input.schedule.type === 'specific_date'
+      ? { type: 'specific-date', date: input.schedule.date }
+      : input.schedule.type === 'queue'
+        ? { type: 'queue' }
+        : {
+            type: 'recurring',
+            startDate: input.schedule.start_date,
+            ...(input.schedule.end_date === undefined ? {} : { endDate: input.schedule.end_date }),
+            rule: toRecurringRule(input.schedule.rule)
+          },
+  ...(input.suppression_windows === undefined
+    ? {}
+    : {
+        suppressionWindows: input.suppression_windows.map((window) => ({
+          startDate: window.start_date,
+          endDate: window.end_date
+        }))
+      })
 });
 
 /**

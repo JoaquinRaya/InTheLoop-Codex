@@ -31,7 +31,12 @@ const versionInput = {
   configSchemaVersion: 'v1',
   sourceRepositoryUrl: 'https://example.com/repo',
   reproducibleBuildInstructionsUrl: 'https://example.com/repo/build.md',
-  runtimeAttestationStatus: 'VERIFIED'
+  runtimeAttestationStatus: 'VERIFIED',
+  publishedArtifactHashes: {
+    serverBinaryHash: 'sha256:binary123',
+    policyHash: 'sha256:policy123',
+    buildProvenanceHash: 'sha256:provenance123'
+  }
 } as const;
 
 describe('employee daily prompt app wiring', () => {

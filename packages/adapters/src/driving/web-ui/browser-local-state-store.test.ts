@@ -38,8 +38,14 @@ describe('createBrowserLocalStateStore', () => {
 
   it('returns empty state when storage has no value', () => {
     const storage = {
-      getItem: (_key: string): string | null => null,
-      setItem: (_key: string, _value: string): void => {}
+      getItem: (key: string): string | null => {
+        void key;
+        return null;
+      },
+      setItem: (key: string, value: string): void => {
+        void key;
+        void value;
+      }
     };
 
     const store = createBrowserLocalStateStore(storage);

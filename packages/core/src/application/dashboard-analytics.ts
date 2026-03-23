@@ -85,13 +85,14 @@ const average = (values: ReadonlyArray<number>): number =>
 const rangeDays = (startDay: string, endDay: string): ReadonlyArray<string> => {
   const start = new Date(normalizeIsoDay(startDay));
   const end = new Date(normalizeIsoDay(endDay));
-  const result: string[] = [];
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / millisecondsPerDay) + 1;
 
-  for (const cursor = new Date(start); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-    result.push(cursor.toISOString().slice(0, 10));
-  }
-
-  return result;
+  return Array.from({ length: totalDays }, (_, index) => {
+    const day = new Date(start);
+    day.setUTCDate(start.getUTCDate() + index);
+    return day.toISOString().slice(0, 10);
+  });
 };
 
 const previousWindowFor = (
@@ -129,17 +130,20 @@ const managerScopeAllows = (
   }
 
   const byManager = new Map(hierarchy.map((entry) => [entry.managerEmail, entry] as const));
-  let current = byManager.get(managerEmail);
+  const hasAncestorManager = (currentManagerEmail: string): boolean => {
+    const current = byManager.get(currentManagerEmail);
+    if (current === undefined || !isSome(current.parentManagerEmail)) {
+      return false;
+    }
 
-  while (current !== undefined && isSome(current.parentManagerEmail)) {
     if (current.parentManagerEmail.value === scope.managerEmail) {
       return true;
     }
 
-    current = byManager.get(current.parentManagerEmail.value);
-  }
+    return hasAncestorManager(current.parentManagerEmail.value);
+  };
 
-  return false;
+  return hasAncestorManager(managerEmail);
 };
 
 const includesAllTags = (value: ReadonlyArray<string>, requiredTags: ReadonlyArray<string>): boolean =>
@@ -272,9 +276,9 @@ const buildDrillDown = (
         percentageChangeFromPreviousOccurrence: isSome(previousAverage)
           ? comparisonPercentage(currentAverage, previousAverage.value)
           : none(),
-        comments: current
-          .filter((record) => isSome(record.response.optionalComment))
-          .map((record) => record.response.optionalComment.value)
+        comments: current.flatMap((record) =>
+          isSome(record.response.optionalComment) ? [record.response.optionalComment.value] : []
+        )
       };
     })
     .sort((left, right) => right.averageScore - left.averageScore);
