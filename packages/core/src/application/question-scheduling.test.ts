@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { left, right, isLeft, isRight } from '../domain/either.js';
+import { none, some, type Option } from '../domain/option.js';
 import { createTenantWorkCalendarPolicy } from './work-calendar-policy.js';
 import {
   createEmptyQuestionSelectionState,
@@ -12,6 +13,9 @@ const workingDayPolicy = {
   isWorkingDay: () => true
 };
 
+const selectedQuestionId = (question: Option<ScheduledQuestion>): string | null =>
+  question._tag === 'Some' ? question.value.id : null;
+
 const baseQuestion = (overrides: Partial<ScheduledQuestion>): ScheduledQuestion => ({
   id: 'q-default',
   createdAt: '2026-03-01T00:00:00.000Z',
@@ -22,6 +26,7 @@ const baseQuestion = (overrides: Partial<ScheduledQuestion>): ScheduledQuestion 
   points: 10,
   allowComments: true,
   schedule: { type: 'queue' },
+  suppressionWindows: [],
   ...overrides
 });
 
@@ -36,6 +41,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
+            endDate: none(),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         }),
@@ -47,7 +53,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question?.id).toBe('q-specific');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-specific');
     }
   });
 
@@ -62,7 +68,7 @@ describe('question scheduling', () => {
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
       expect(selected.right.localDate).toBe('2026-02-28');
-      expect(selected.right.question?.id).toBe('q-specific');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-specific');
     }
   });
 
@@ -77,7 +83,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
-            endDate: '2026-03-31',
+            endDate: some('2026-03-31'),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         })
@@ -88,7 +94,7 @@ describe('question scheduling', () => {
 
     expect(isRight(beforeStart)).toBe(true);
     if (isRight(beforeStart)) {
-      expect(beforeStart.right.question).toBeNull();
+      expect(selectedQuestionId(beforeStart.right.question)).toBeNull();
     }
 
     const afterEnd = selectQuestionForEmployeeMoment(
@@ -99,7 +105,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
-            endDate: '2026-03-31',
+            endDate: some('2026-03-31'),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         })
@@ -110,7 +116,7 @@ describe('question scheduling', () => {
 
     expect(isRight(afterEnd)).toBe(true);
     if (isRight(afterEnd)) {
-      expect(afterEnd.right.question).toBeNull();
+      expect(selectedQuestionId(afterEnd.right.question)).toBeNull();
     }
   });
 
@@ -123,6 +129,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-31',
+            endDate: none(),
             rule: { kind: 'interval-months', intervalMonths: 1 }
           }
         })
@@ -133,7 +140,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question?.id).toBe('q-monthly');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-monthly');
     }
   });
 
@@ -148,6 +155,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-01',
+            endDate: none(),
             rule: { kind: 'nth-weekday-of-month', nth: 3, weekday: 2 }
           }
         })
@@ -158,7 +166,7 @@ describe('question scheduling', () => {
 
     expect(isRight(nthMismatch)).toBe(true);
     if (isRight(nthMismatch)) {
-      expect(nthMismatch.right.question).toBeNull();
+      expect(selectedQuestionId(nthMismatch.right.question)).toBeNull();
     }
 
     const intervalMonthsNotDue = selectQuestionForEmployeeMoment(
@@ -169,6 +177,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-31',
+            endDate: none(),
             rule: { kind: 'interval-months', intervalMonths: 2 }
           }
         })
@@ -179,7 +188,7 @@ describe('question scheduling', () => {
 
     expect(isRight(intervalMonthsNotDue)).toBe(true);
     if (isRight(intervalMonthsNotDue)) {
-      expect(intervalMonthsNotDue.right.question).toBeNull();
+      expect(selectedQuestionId(intervalMonthsNotDue.right.question)).toBeNull();
     }
   });
 
@@ -194,6 +203,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-01',
+            endDate: none(),
             rule: { kind: 'last-weekday-of-month', weekday: 3 }
           }
         })
@@ -204,7 +214,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question).toBeNull();
+      expect(selectedQuestionId(selected.right.question)).toBeNull();
     }
   });
 
@@ -217,6 +227,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-01',
+            endDate: none(),
             rule: { kind: 'nth-weekday-of-month', nth: 3, weekday: 2 }
           }
         })
@@ -227,7 +238,7 @@ describe('question scheduling', () => {
 
     expect(isRight(thirdTuesday)).toBe(true);
     if (isRight(thirdTuesday)) {
-      expect(thirdTuesday.right.question?.id).toBe('q-third-tuesday');
+      expect(selectedQuestionId(thirdTuesday.right.question)).toBe('q-third-tuesday');
     }
 
     const lastWednesday = selectQuestionForEmployeeMoment(
@@ -238,6 +249,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-01',
+            endDate: none(),
             rule: { kind: 'last-weekday-of-month', weekday: 3 }
           }
         })
@@ -248,7 +260,7 @@ describe('question scheduling', () => {
 
     expect(isRight(lastWednesday)).toBe(true);
     if (isRight(lastWednesday)) {
-      expect(lastWednesday.right.question?.id).toBe('q-last-wednesday');
+      expect(selectedQuestionId(lastWednesday.right.question)).toBe('q-last-wednesday');
     }
   });
 
@@ -261,6 +273,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
+            endDate: none(),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         }),
@@ -269,6 +282,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-08',
+            endDate: none(),
             rule: { kind: 'interval-days', intervalDays: 14 }
           }
         })
@@ -279,7 +293,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question?.id).toBe('q-biweekly');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-biweekly');
     }
   });
 
@@ -309,7 +323,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question?.id).toBe('q-most-recent');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-most-recent');
     }
   });
 
@@ -325,6 +339,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
+            endDate: none(),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         }),
@@ -334,6 +349,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
+            endDate: none(),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         })
@@ -344,7 +360,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question?.id).toBe('q-recurring-a');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-recurring-a');
     }
   });
 
@@ -357,6 +373,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
+            endDate: none(),
             rule: { kind: 'interval-days', intervalDays: 5 }
           }
         }),
@@ -372,7 +389,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question?.id).toBe('q-queue-fallback');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-queue-fallback');
       expect(selected.right.nextState.consumedQueueQuestionIds).toEqual(['q-queue-fallback']);
     }
   });
@@ -389,6 +406,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-25',
+            endDate: none(),
             rule: { kind: 'interval-months', intervalMonths: 1 }
           }
         }),
@@ -398,6 +416,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-01',
+            endDate: none(),
             rule: { kind: 'last-weekday-of-month', weekday: 3 }
           }
         }),
@@ -407,6 +426,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-01-01',
+            endDate: none(),
             rule: { kind: 'nth-weekday-of-month', nth: 4, weekday: 3 }
           }
         })
@@ -417,7 +437,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question?.id).toBe('q-last-weekday');
+      expect(selectedQuestionId(selected.right.question)).toBe('q-last-weekday');
     }
   });
 
@@ -462,7 +482,7 @@ describe('question scheduling', () => {
       return;
     }
 
-    expect(initial.right.question?.id).toBe('q-queue-1');
+    expect(selectedQuestionId(initial.right.question)).toBe('q-queue-1');
     expect(initial.right.nextState.consumedQueueQuestionIds).toEqual(['q-queue-1']);
 
     const second = selectQuestionForEmployeeMoment(
@@ -477,7 +497,7 @@ describe('question scheduling', () => {
 
     expect(isRight(second)).toBe(true);
     if (isRight(second)) {
-      expect(second.right.question?.id).toBe('q-queue-2');
+      expect(selectedQuestionId(second.right.question)).toBe('q-queue-2');
       expect(second.right.nextState.consumedQueueQuestionIds).toEqual(['q-queue-1', 'q-queue-2']);
     }
   });
@@ -497,7 +517,7 @@ describe('question scheduling', () => {
 
     expect(isRight(weekend)).toBe(true);
     if (isRight(weekend)) {
-      expect(weekend.right.question).toBeNull();
+      expect(selectedQuestionId(weekend.right.question)).toBeNull();
     }
 
     const holiday = selectQuestionForEmployeeMoment(
@@ -509,7 +529,7 @@ describe('question scheduling', () => {
 
     expect(isRight(holiday)).toBe(true);
     if (isRight(holiday)) {
-      expect(holiday.right.question).toBeNull();
+      expect(selectedQuestionId(holiday.right.question)).toBeNull();
     }
   });
 
@@ -528,6 +548,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '03-01-2026',
+            endDate: none(),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         })
@@ -554,7 +575,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
-            endDate: '2026-02-01',
+            endDate: some('2026-02-01'),
             rule: { kind: 'interval-days', intervalDays: 0 }
           },
           suppressionWindows: [{ startDate: '2026-03-25', endDate: '2026-03-20' }]
@@ -564,6 +585,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
+            endDate: none(),
             rule: { kind: 'interval-months', intervalMonths: 0 }
           }
         })
@@ -594,7 +616,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
-            endDate: '03-31-2026',
+            endDate: some('03-31-2026'),
             rule: { kind: 'interval-days', intervalDays: 7 }
           }
         }),
@@ -603,6 +625,7 @@ describe('question scheduling', () => {
           schedule: {
             type: 'recurring',
             startDate: '2026-03-01',
+            endDate: none(),
             rule: { kind: 'nth-weekday-of-month', nth: 6, weekday: 1 }
           }
         })
@@ -662,7 +685,7 @@ describe('question scheduling', () => {
 
     expect(isRight(selected)).toBe(true);
     if (isRight(selected)) {
-      expect(selected.right.question).toBeNull();
+      expect(selectedQuestionId(selected.right.question)).toBeNull();
       expect(selected.right.nextState.consumedQueueQuestionIds).toEqual(['q-queue-1']);
     }
   });
@@ -717,7 +740,7 @@ describe('question scheduling', () => {
 
     expect(isRight(persisted)).toBe(true);
     if (isRight(persisted)) {
-      expect(persisted.right.question?.id).toBe('q-queue-1');
+      expect(selectedQuestionId(persisted.right.question)).toBe('q-queue-1');
     }
 
     expect((stateContainer.get('state') ?? createEmptyQuestionSelectionState()).consumedQueueQuestionIds).toEqual([

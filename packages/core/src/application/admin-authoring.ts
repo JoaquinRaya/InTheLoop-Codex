@@ -1,13 +1,14 @@
 import { left, right, type Either } from '../domain/either.js';
+import { some, type Option } from '../domain/option.js';
 import {
   selectQuestionForEmployeeMoment,
   type DailyQuestionSelection,
   type QuestionSchedulingValidationError,
   type ScheduledQuestion,
   type SelectionContext,
-  type WorkCalendarPolicy,
   type QuestionSelectionState
 } from './question-scheduling.js';
+import type { ForWorkCalendarPolicy } from '../ports/driven/for-work-calendar-policy.js';
 
 export type QuestionAudienceTarget =
   | Readonly<{ readonly type: 'whole-company' }>
@@ -16,11 +17,11 @@ export type QuestionAudienceTarget =
 
 export type AdminAuthoringQuestion = Readonly<{
   readonly target: QuestionAudienceTarget;
-  readonly firstDisplayedAt?: string;
+  readonly firstDisplayedAt: Option<string>;
 }> & ScheduledQuestion;
 
 export type AdminAuthoringEmployeeProfile = Readonly<{
-  readonly managerEmail?: string;
+  readonly managerEmail: Option<string>;
   readonly managerAncestryEmails: readonly string[];
   readonly groupIds: readonly string[];
 }>;
@@ -44,11 +45,14 @@ const targetMatchesProfile = (
     return profile.groupIds.includes(target.groupId);
   }
 
-  return profile.managerEmail === target.managerEmail || profile.managerAncestryEmails.includes(target.managerEmail);
+  return (
+    (profile.managerEmail._tag === 'Some' && profile.managerEmail.value === target.managerEmail) ||
+    profile.managerAncestryEmails.includes(target.managerEmail)
+  );
 };
 
 export const canEditAdminAuthoringQuestion = (question: AdminAuthoringQuestion): boolean =>
-  question.firstDisplayedAt === undefined;
+  question.firstDisplayedAt._tag === 'None';
 
 export const applyAdminQuestionEdit = (
   existing: AdminAuthoringQuestion,
@@ -62,7 +66,8 @@ export const applyAdminQuestionEdit = (
   }
 
   return right({
-    ...updated
+    ...updated,
+    firstDisplayedAt: existing.firstDisplayedAt
   });
 };
 
@@ -77,13 +82,13 @@ export const recordQuestionFirstDisplay = (
     });
   }
 
-  if (question.firstDisplayedAt !== undefined) {
+  if (question.firstDisplayedAt._tag === 'Some') {
     return right(question);
   }
 
   return right({
     ...question,
-    firstDisplayedAt: displayedAtIso
+    firstDisplayedAt: some(displayedAtIso)
   });
 };
 
@@ -92,7 +97,7 @@ export const previewQuestionResolutionForEmployee = (
   profile: AdminAuthoringEmployeeProfile,
   questions: readonly AdminAuthoringQuestion[],
   state: QuestionSelectionState,
-  calendarPolicy: WorkCalendarPolicy
+  calendarPolicy: ForWorkCalendarPolicy
 ): Either<readonly QuestionSchedulingValidationError[], DailyQuestionSelection> => {
   const targetedQuestions = questions.filter((question) => targetMatchesProfile(question.target, profile));
   return selectQuestionForEmployeeMoment(context, targetedQuestions, state, calendarPolicy);

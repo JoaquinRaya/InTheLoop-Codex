@@ -1,7 +1,8 @@
 /**
  * PRD-03 tenant calendar policy helpers.
  */
-import type { Weekday, WorkCalendarPolicy } from './question-scheduling.js';
+import type { Weekday } from './question-scheduling.js';
+import type { ForWorkCalendarPolicy } from '../ports/driven/for-work-calendar-policy.js';
 
 export type TenantCalendarConfiguration = Readonly<{
   readonly workingWeekdays: readonly Weekday[];
@@ -20,7 +21,7 @@ const weekdayFromIsoDate = (localDate: string): Weekday => {
  */
 export const createTenantWorkCalendarPolicy = (
   configuration: TenantCalendarConfiguration
-): WorkCalendarPolicy => {
+): ForWorkCalendarPolicy => {
   const workingWeekdays = toSet(configuration.workingWeekdays);
   const holidays = toSet(configuration.holidays);
 

@@ -2,6 +2,7 @@
  * REST authoring contract adapter for PRD-03 scheduling inputs.
  */
 import { left, right, type Either } from '../../../../core/src/domain/either.js';
+import { isSome, none, some } from '../../../../core/src/domain/option.js';
 import {
   validateQuestionSchedules,
   type RecurringRule,
@@ -87,17 +88,13 @@ const toScheduledQuestion = (input: AuthoringQuestionInput): ScheduledQuestion =
         : {
             type: 'recurring',
             startDate: input.schedule.start_date,
-            ...(input.schedule.end_date === undefined ? {} : { endDate: input.schedule.end_date }),
+            endDate: input.schedule.end_date === undefined ? none() : some(input.schedule.end_date),
             rule: toRecurringRule(input.schedule.rule)
           },
-  ...(input.suppression_windows === undefined
-    ? {}
-    : {
-        suppressionWindows: input.suppression_windows.map((window) => ({
-          startDate: window.start_date,
-          endDate: window.end_date
-        }))
-      })
+  suppressionWindows: (input.suppression_windows ?? []).map((window) => ({
+    startDate: window.start_date,
+    endDate: window.end_date
+  }))
 });
 
 /**
@@ -112,7 +109,8 @@ export const parseAndValidateQuestionAuthoringBatch = (
   if (validation._tag === 'Left') {
     return left(
       validation.left.map(
-        (error) => `${error.code}${error.questionId === undefined ? '' : `:${error.questionId}`}:${error.message}`
+        (error) =>
+          `${error.code}${isSome(error.questionId) ? `:${error.questionId.value}` : ''}:${error.message}`
       )
     );
   }

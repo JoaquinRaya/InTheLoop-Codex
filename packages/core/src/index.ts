@@ -24,3 +24,4 @@ export * from './ports/driving/for-question-scheduling.js';
 export * from './ports/driving/for-aggregation-and-privacy-threshold.js';
 export * from './ports/driven/for-employee-prompt-local-state-storage.js';
 export * from './ports/driven/for-question-selection-state-storage.js';
+export * from './ports/driven/for-work-calendar-policy.js';

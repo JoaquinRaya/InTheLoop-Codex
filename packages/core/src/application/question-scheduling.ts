@@ -2,7 +2,9 @@
  * PRD-03 application service for deterministic question selection per employee-day.
  */
 import { left, right, type Either } from '../domain/either.js';
+import { none, some, type Option } from '../domain/option.js';
 import type { ForQuestionSelectionStateStorage } from '../ports/driven/for-question-selection-state-storage.js';
+import type { ForWorkCalendarPolicy } from '../ports/driven/for-work-calendar-policy.js';
 
 export type DateRange = Readonly<{
   readonly startDate: string;
@@ -46,7 +48,7 @@ export type RecurringRule =
 export type RecurringSchedule = Readonly<{
   readonly type: 'recurring';
   readonly startDate: string;
-  readonly endDate?: string;
+  readonly endDate: Option<string>;
   readonly rule: RecurringRule;
 }>;
 
@@ -66,11 +68,7 @@ export type ScheduledQuestion = Readonly<{
   readonly points: number;
   readonly allowComments: boolean;
   readonly schedule: QuestionSchedule;
-  readonly suppressionWindows?: readonly DateRange[];
-}>;
-
-export type WorkCalendarPolicy = Readonly<{
-  readonly isWorkingDay: (localDate: string, timeZone: string) => boolean;
+  readonly suppressionWindows: readonly DateRange[];
 }>;
 
 export type QuestionSelectionState = Readonly<{
@@ -78,7 +76,7 @@ export type QuestionSelectionState = Readonly<{
 }>;
 
 export type DailyQuestionSelection = Readonly<{
-  readonly question: ScheduledQuestion | null;
+  readonly question: Option<ScheduledQuestion>;
   readonly nextState: QuestionSelectionState;
   readonly localDate: string;
   readonly timeZone: string;
@@ -94,7 +92,7 @@ export type QuestionSchedulingValidationError = Readonly<{
     | 'INVALID_TIMEZONE'
     | 'VERSION_CONFLICT';
   readonly message: string;
-  readonly questionId?: string;
+  readonly questionId: Option<string>;
 }>;
 
 export type SelectionContext = Readonly<{
@@ -110,7 +108,7 @@ const isDateString = (value: string): boolean =>
 const isDateWithinRange = (date: string, range: DateRange): boolean => date >= range.startDate && date <= range.endDate;
 
 const isSuppressedOnDate = (question: ScheduledQuestion, localDate: string): boolean =>
-  (question.suppressionWindows ?? []).some((range) => isDateWithinRange(localDate, range));
+  question.suppressionWindows.some((range) => isDateWithinRange(localDate, range));
 
 const parseDateParts = (
   isoDate: string
@@ -122,35 +120,43 @@ const parseDateParts = (
 
 const daysInMonth = (year: number, month: number): number => new Date(Date.UTC(year, month, 0)).getUTCDate();
 
+const canonicalTimeZoneAliases = ['UTC', 'Etc/UTC', 'GMT', 'Etc/GMT'] as const;
+
+const isValidTimeZone = (timeZone: string): boolean =>
+  canonicalTimeZoneAliases.some((alias) => alias === timeZone) ||
+  Intl.supportedValuesOf('timeZone').some((supported) => supported === timeZone);
+
 const extractLocalDate = (timestampUtcIso: string, timeZone: string): Either<QuestionSchedulingValidationError, string> => {
-  try {
-    const utcDate = new Date(timestampUtcIso);
+  const utcDate = new Date(timestampUtcIso);
 
-    if (Number.isNaN(utcDate.getTime())) {
-      return left({
-        code: 'INVALID_DATE_FORMAT',
-        message: `Invalid UTC timestamp: ${timestampUtcIso}`
-      });
-    }
-
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
-    const partEntries = formatter
-      .formatToParts(utcDate)
-      .map((part) => [part.type, part.value] as const);
-    const partMap = Object.fromEntries(partEntries) as Readonly<Record<string, string>>;
-
-    return right(`${partMap.year}-${partMap.month}-${partMap.day}`);
-  } catch {
+  if (Number.isNaN(utcDate.getTime())) {
     return left({
-      code: 'INVALID_TIMEZONE',
-      message: `Invalid timezone: ${timeZone}`
+      code: 'INVALID_DATE_FORMAT',
+      message: `Invalid UTC timestamp: ${timestampUtcIso}`,
+      questionId: none()
     });
   }
+
+  if (!isValidTimeZone(timeZone)) {
+    return left({
+      code: 'INVALID_TIMEZONE',
+      message: `Invalid timezone: ${timeZone}`,
+      questionId: none()
+    });
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const partEntries = formatter
+    .formatToParts(utcDate)
+    .map((part) => [part.type, part.value] as const);
+  const partMap = Object.fromEntries(partEntries) as Readonly<Record<string, string>>;
+
+  return right(`${partMap.year}-${partMap.month}-${partMap.day}`);
 };
 
 const weekdayFromDate = (date: string): Weekday => new Date(`${date}T00:00:00.000Z`).getUTCDay() as Weekday;
@@ -196,7 +202,7 @@ const isRecurringScheduleDueOnDate = (schedule: RecurringSchedule, localDate: st
     return false;
   }
 
-  if (schedule.endDate !== undefined && localDate > schedule.endDate) {
+  if (schedule.endDate._tag === 'Some' && localDate > schedule.endDate.value) {
     return false;
   }
 
@@ -266,7 +272,7 @@ const validateDateRange = (
   if (!isDateString(range.startDate) || !isDateString(range.endDate)) {
     return [{
       code: 'INVALID_DATE_FORMAT',
-      questionId,
+      questionId: some(questionId),
       message: 'Suppression window requires ISO yyyy-mm-dd start and end dates.'
     }];
   }
@@ -274,7 +280,7 @@ const validateDateRange = (
   if (range.startDate > range.endDate) {
     return [{
       code: 'INVALID_DATE_RANGE',
-      questionId,
+      questionId: some(questionId),
       message: 'Suppression window startDate cannot be after endDate.'
     }];
   }
@@ -288,13 +294,13 @@ export const validateQuestionSchedules = (
   const errors = questions.flatMap((question) => {
     const specificDateErrors =
       question.schedule.type === 'specific-date' && !isDateString(question.schedule.date)
-        ? [
-            {
-              code: 'INVALID_DATE_FORMAT' as const,
-              questionId: question.id,
-              message: 'Specific-date schedule requires an ISO yyyy-mm-dd date.'
-            }
-          ]
+              ? [
+                  {
+                    code: 'INVALID_DATE_FORMAT' as const,
+                    questionId: some(question.id),
+                    message: 'Specific-date schedule requires an ISO yyyy-mm-dd date.'
+                  }
+                ]
         : [];
 
     const recurringErrors =
@@ -305,26 +311,26 @@ export const validateQuestionSchedules = (
               ? [
                   {
                     code: 'INVALID_DATE_FORMAT' as const,
-                    questionId: question.id,
+                    questionId: some(question.id),
                     message: 'Recurring schedule requires an ISO yyyy-mm-dd startDate.'
                   }
                 ]
               : []),
-            ...(question.schedule.endDate === undefined
+            ...(question.schedule.endDate._tag === 'None'
               ? []
-              : !isDateString(question.schedule.endDate)
+              : !isDateString(question.schedule.endDate.value)
                 ? [
                     {
                       code: 'INVALID_DATE_FORMAT' as const,
-                      questionId: question.id,
+                      questionId: some(question.id),
                       message: 'Recurring schedule endDate must be ISO yyyy-mm-dd when provided.'
                     }
                   ]
-                : question.schedule.endDate < question.schedule.startDate
+                : question.schedule.endDate.value < question.schedule.startDate
                   ? [
                       {
                         code: 'INVALID_DATE_RANGE' as const,
-                        questionId: question.id,
+                        questionId: some(question.id),
                         message: 'Recurring schedule endDate cannot be before startDate.'
                       }
                     ]
@@ -333,7 +339,7 @@ export const validateQuestionSchedules = (
               ? [
                   {
                     code: 'INVALID_INTERVAL_DAYS' as const,
-                    questionId: question.id,
+                    questionId: some(question.id),
                     message: 'intervalDays must be at least 1.'
                   }
                 ]
@@ -342,7 +348,7 @@ export const validateQuestionSchedules = (
               ? [
                   {
                     code: 'INVALID_INTERVAL_MONTHS' as const,
-                    questionId: question.id,
+                    questionId: some(question.id),
                     message: 'intervalMonths must be at least 1.'
                   }
                 ]
@@ -352,14 +358,14 @@ export const validateQuestionSchedules = (
               ? [
                   {
                     code: 'INVALID_NTH_WEEKDAY' as const,
-                    questionId: question.id,
+                    questionId: some(question.id),
                     message: 'nth-weekday-of-month requires nth in [1..5].'
                   }
                 ]
               : [])
           ];
 
-    const suppressionWindowErrors = (question.suppressionWindows ?? []).flatMap((window) =>
+    const suppressionWindowErrors = question.suppressionWindows.flatMap((window) =>
       validateDateRange(window, question.id)
     );
 
@@ -381,7 +387,7 @@ export const selectQuestionForEmployeeMoment = (
   context: SelectionContext,
   allQuestions: readonly ScheduledQuestion[],
   state: QuestionSelectionState,
-  calendarPolicy: WorkCalendarPolicy
+  calendarPolicy: ForWorkCalendarPolicy
 ): Either<readonly QuestionSchedulingValidationError[], DailyQuestionSelection> => {
   const validatedQuestions = validateQuestionSchedules(allQuestions);
 
@@ -399,7 +405,7 @@ export const selectQuestionForEmployeeMoment = (
 
   if (!calendarPolicy.isWorkingDay(localDate, context.timeZone)) {
     return right({
-      question: null,
+      question: none(),
       nextState: state,
       localDate,
       timeZone: context.timeZone
@@ -416,7 +422,7 @@ export const selectQuestionForEmployeeMoment = (
 
   if (selectedSpecificDateQuestion !== undefined) {
     return right({
-      question: selectedSpecificDateQuestion,
+      question: some(selectedSpecificDateQuestion),
       nextState: state,
       localDate,
       timeZone: context.timeZone
@@ -439,7 +445,7 @@ export const selectQuestionForEmployeeMoment = (
 
   if (selectedRecurringQuestion !== undefined) {
     return right({
-      question: selectedRecurringQuestion,
+      question: some(selectedRecurringQuestion),
       nextState: state,
       localDate,
       timeZone: context.timeZone
@@ -454,7 +460,7 @@ export const selectQuestionForEmployeeMoment = (
   const [selectedQueueQuestion] = queueCandidates;
   if (selectedQueueQuestion === undefined) {
     return right({
-      question: null,
+      question: none(),
       nextState: state,
       localDate,
       timeZone: context.timeZone
@@ -462,7 +468,7 @@ export const selectQuestionForEmployeeMoment = (
   }
 
   return right({
-    question: selectedQueueQuestion,
+    question: some(selectedQueueQuestion),
     nextState: {
       consumedQueueQuestionIds: [...state.consumedQueueQuestionIds, selectedQueueQuestion.id]
     },
@@ -476,7 +482,7 @@ export const selectAndPersistQuestionForEmployeeMoment = (
   context: SelectionContext,
   allQuestions: readonly ScheduledQuestion[],
   storage: ForQuestionSelectionStateStorage,
-  calendarPolicy: WorkCalendarPolicy
+  calendarPolicy: ForWorkCalendarPolicy
 ): Either<readonly QuestionSchedulingValidationError[], DailyQuestionSelection> => {
   const stored = storage.loadState(tenantId);
 
@@ -492,7 +498,8 @@ export const selectAndPersistQuestionForEmployeeMoment = (
     return left([
       {
         code: 'VERSION_CONFLICT',
-        message: 'Question-selection state version conflict while persisting queue consumption.'
+        message: 'Question-selection state version conflict while persisting queue consumption.',
+        questionId: none()
       }
     ]);
   }

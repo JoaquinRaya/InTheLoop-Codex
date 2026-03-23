@@ -1,0 +1,187 @@
+import { Pool, type QueryResultRow } from 'pg';
+import type { AdminAuthoringQuestion, AdminAuthoringEmployeeProfile } from '../../../core/src/application/admin-authoring.js';
+import { none, some } from '../../../core/src/domain/option.js';
+import {
+  createEmptyQuestionSelectionState,
+  type QuestionSelectionState
+} from '../../../core/src/application/question-scheduling.js';
+import { left, right, type Either } from '../../../core/src/domain/either.js';
+import type { StoredQuestionSelectionState } from '../../../core/src/ports/driven/for-question-selection-state-storage.js';
+import type { RuntimeStore } from './runtime-store.js';
+
+type QuestionRow = QueryResultRow & Readonly<{
+  readonly payload: string;
+}>;
+
+type SelectionRow = QueryResultRow & Readonly<{
+  readonly state: string;
+  readonly version: number;
+}>;
+
+const parseQuestion = (payload: string): AdminAuthoringQuestion =>
+  JSON.parse(payload) as AdminAuthoringQuestion;
+
+const parseState = (payload: string): QuestionSelectionState =>
+  JSON.parse(payload) as QuestionSelectionState;
+
+export class PostgresRuntimeStore implements RuntimeStore {
+  private readonly pool: Pool;
+
+  public constructor(connectionString: string) {
+    this.pool = new Pool({ connectionString });
+  }
+
+  public async initialize(): Promise<void> {
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_questions (
+        tenant_id TEXT NOT NULL,
+        question_id TEXT NOT NULL,
+        payload JSONB NOT NULL,
+        PRIMARY KEY (tenant_id, question_id)
+      );
+    `);
+
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS question_selection_state (
+        tenant_id TEXT PRIMARY KEY,
+        state JSONB NOT NULL,
+        version INTEGER NOT NULL
+      );
+    `);
+  }
+
+  public async upsertQuestions(
+    tenantId: string,
+    questions: readonly AdminAuthoringQuestion[]
+  ): Promise<void> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM admin_questions WHERE tenant_id = $1', [tenantId]);
+
+      for (const question of questions) {
+        await client.query(
+          `
+            INSERT INTO admin_questions (tenant_id, question_id, payload)
+            VALUES ($1, $2, $3::jsonb)
+          `,
+          [tenantId, question.id, JSON.stringify(question)]
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  public async loadQuestions(tenantId: string): Promise<readonly AdminAuthoringQuestion[]> {
+    const result = await this.pool.query<QuestionRow>(
+      `
+        SELECT payload::text AS payload
+        FROM admin_questions
+        WHERE tenant_id = $1
+      `,
+      [tenantId]
+    );
+
+    return result.rows.map((row: QuestionRow) => parseQuestion(row.payload));
+  }
+
+  public async loadSelectionState(tenantId: string): Promise<StoredQuestionSelectionState> {
+    const result = await this.pool.query<SelectionRow>(
+      `
+        SELECT state::text AS state, version
+        FROM question_selection_state
+        WHERE tenant_id = $1
+      `,
+      [tenantId]
+    );
+
+    const [row] = result.rows;
+
+    if (row === undefined) {
+      return {
+        state: createEmptyQuestionSelectionState(),
+        version: 0
+      };
+    }
+
+    return {
+      state: parseState(row.state),
+      version: row.version
+    };
+  }
+
+  public async saveSelectionState(
+    tenantId: string,
+    nextState: QuestionSelectionState,
+    expectedVersion: number
+  ): Promise<Either<'VERSION_CONFLICT', number>> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const current = await client.query<SelectionRow>(
+        `
+          SELECT state::text AS state, version
+          FROM question_selection_state
+          WHERE tenant_id = $1
+          FOR UPDATE
+        `,
+        [tenantId]
+      );
+
+      const [currentRow] = current.rows;
+      const currentVersion = currentRow?.version ?? 0;
+
+      if (currentVersion !== expectedVersion) {
+        await client.query('ROLLBACK');
+        return left('VERSION_CONFLICT');
+      }
+
+      const nextVersion = currentVersion + 1;
+
+      await client.query(
+        `
+          INSERT INTO question_selection_state (tenant_id, state, version)
+          VALUES ($1, $2::jsonb, $3)
+          ON CONFLICT (tenant_id)
+          DO UPDATE SET state = EXCLUDED.state, version = EXCLUDED.version
+        `,
+        [tenantId, JSON.stringify(nextState), nextVersion]
+      );
+
+      await client.query('COMMIT');
+      return right(nextVersion);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  public async close(): Promise<void> {
+    await this.pool.end();
+  }
+}
+
+export type PromptRequestProfileInput = Readonly<{
+  readonly managerEmail?: string;
+  readonly managerAncestryEmails: readonly string[];
+  readonly groupIds: readonly string[];
+}>;
+
+export const toAdminAuthoringProfile = (
+  input: PromptRequestProfileInput
+): AdminAuthoringEmployeeProfile => ({
+  managerEmail: input.managerEmail === undefined ? none() : some(input.managerEmail),
+  managerAncestryEmails: input.managerAncestryEmails,
+  groupIds: input.groupIds
+});

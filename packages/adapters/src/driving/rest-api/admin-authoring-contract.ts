@@ -1,4 +1,5 @@
 import { left, right, type Either } from '../../../../core/src/domain/either.js';
+import { none, some } from '../../../../core/src/domain/option.js';
 import {
   type AdminAuthoringEmployeeProfile,
   type AdminAuthoringQuestion,
@@ -73,7 +74,7 @@ export const parseAndValidateAdminAuthoringBatch = (
       return {
         ...question,
         target: toAudienceTarget(payload.questions[index]!.target),
-        ...(firstDisplayedAt === undefined ? {} : { firstDisplayedAt })
+        firstDisplayedAt: firstDisplayedAt === undefined ? none() : some(firstDisplayedAt)
       };
     })
   );
@@ -89,9 +90,7 @@ export const parseAdminAuthoringPreviewInput = (
   timestampUtcIso: payload.timestamp_utc_iso,
   timeZone: payload.time_zone,
   profile: {
-    ...(payload.profile.manager_email === undefined
-      ? {}
-      : { managerEmail: payload.profile.manager_email }),
+    managerEmail: payload.profile.manager_email === undefined ? none() : some(payload.profile.manager_email),
     managerAncestryEmails: payload.profile.manager_ancestry_emails,
     groupIds: payload.profile.group_ids
   }
