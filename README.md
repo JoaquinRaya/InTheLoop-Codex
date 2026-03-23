@@ -110,7 +110,13 @@ Start with:
 
 - Core and adapter test suites pass with full coverage.
 - PRD-linked modules are implemented across `core` and `adapters`.
+- PRD-11 requirements are documented and tracked; initial one-shot thin-client adapter implementation is in place, with installer and desktop packaging work pending.
 - Production-readiness gaps are mostly operational and governance-driven (audit process, external verification artifacts, rollout controls).
+
+## Latest migration note
+
+- Admin UI + options model migration (2026-03-23):
+  - `docs/engineering/ADMIN_UI_AND_OPTIONS_MODEL_MIGRATION_2026-03-23.md`
 
 ## Contributing workflow
 
