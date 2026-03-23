@@ -12,7 +12,7 @@ describe('parseAndValidateQuestionAuthoringBatch', () => {
           text: 'How clear were sprint goals?',
           category: 'execution',
           tags: ['sprint'],
-          options: ['1', '2', '3'],
+          options: [{ text: '1', points: 10 }, { text: '2', points: 20 }, { text: '3', points: 30 }],
           points: 10,
           allow_comments: true,
           schedule: {
@@ -27,7 +27,7 @@ describe('parseAndValidateQuestionAuthoringBatch', () => {
           text: 'How sustainable is your workload?',
           category: 'wellbeing',
           tags: ['load'],
-          options: ['1', '2', '3'],
+          options: [{ text: '1', points: 10 }, { text: '2', points: 20 }, { text: '3', points: 30 }],
           points: 10,
           allow_comments: true,
           schedule: {
@@ -73,7 +73,7 @@ describe('parseAndValidateQuestionAuthoringBatch', () => {
           text: 'Bad rule',
           category: 'quality',
           tags: [],
-          options: ['1'],
+          options: [{ text: '1', points: 1 }],
           points: 1,
           allow_comments: false,
           schedule: {

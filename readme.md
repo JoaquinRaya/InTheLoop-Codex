@@ -112,6 +112,11 @@ Start with:
 - PRD-linked modules are implemented across `core` and `adapters`.
 - Production-readiness gaps are mostly operational and governance-driven (audit process, external verification artifacts, rollout controls).
 
+## Latest migration note
+
+- Admin UI + options model migration (2026-03-23):
+  - `docs/engineering/ADMIN_UI_AND_OPTIONS_MODEL_MIGRATION_2026-03-23.md`
+
 ## Contributing workflow
 
 1. Implement changes in the appropriate layer (domain/application/ports/adapters).

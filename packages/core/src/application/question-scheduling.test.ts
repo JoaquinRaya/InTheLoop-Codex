@@ -22,7 +22,7 @@ const baseQuestion = (overrides: Partial<ScheduledQuestion>): ScheduledQuestion 
   text: 'How was your day?',
   category: 'engagement',
   tags: ['default'],
-  options: ['1', '2', '3'],
+  options: [{ text: '1', points: 10 }, { text: '2', points: 20 }, { text: '3', points: 30 }],
   points: 10,
   allowComments: true,
   schedule: { type: 'queue' },

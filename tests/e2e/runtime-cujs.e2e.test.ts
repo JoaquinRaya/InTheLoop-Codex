@@ -1,31 +1,45 @@
 import { test, expect } from '@playwright/test';
 import { createServer } from '../../packages/adapters/src/runtime/server.js';
-import { createInMemoryRuntimeStore } from '../../packages/adapters/src/runtime/in-memory-runtime-store.js';
+import { PostgresRuntimeStore } from '../../packages/adapters/src/runtime/postgres-runtime-store.js';
+import { getAvailablePort, startPostgresContainer } from './support/postgres-harness.js';
 
 test.describe('runtime CUJs', () => {
-  const serverPromise = (async (): Promise<Awaited<ReturnType<typeof createServer>>> => {
+  const contextPromise = (async (): Promise<Readonly<{
+    readonly server: Awaited<ReturnType<typeof createServer>>;
+    readonly postgres: Awaited<ReturnType<typeof startPostgresContainer>>;
+    readonly appPort: number;
+  }>> => {
+    const postgres = await startPostgresContainer();
+    const appPort = await getAvailablePort();
+
     const server = await createServer({
-      store: createInMemoryRuntimeStore()
+      store: new PostgresRuntimeStore(postgres.connectionString)
     });
 
     await server.listen({
       host: '127.0.0.1',
-      port: 4173
+      port: appPort
     });
-    return server;
+    return {
+      server,
+      postgres,
+      appPort
+    };
   })();
 
   test.beforeAll(async () => {
-    await serverPromise;
+    await contextPromise;
   });
 
   test.afterAll(async () => {
-    const server = await serverPromise;
-    await server.close();
+    const context = await contextPromise;
+    await context.server.close();
+    await context.postgres.stop();
   });
 
   test('CUJ: admin authors questions then employee receives first prompt', async ({ request }) => {
-    const upsert = await request.post('/admin/questions', {
+    const { appPort } = await contextPromise;
+    const upsert = await request.post(`http://127.0.0.1:${appPort}/admin/questions`, {
       data: {
         tenantId: 'tenant-a',
         questions: [
@@ -35,7 +49,13 @@ test.describe('runtime CUJs', () => {
             text: 'How was your day?',
             category: 'engagement',
             tags: ['daily'],
-            options: ['1', '2', '3', '4', '5'],
+            options: [
+              { text: '1', points: 20 },
+              { text: '2', points: 40 },
+              { text: '3', points: 60 },
+              { text: '4', points: 80 },
+              { text: '5', points: 100 }
+            ],
             points: 10,
             allow_comments: true,
             schedule: { type: 'queue' },
@@ -51,7 +71,7 @@ test.describe('runtime CUJs', () => {
       count: 1
     });
 
-    const prompt = await request.post('/employee/prompt', {
+    const prompt = await request.post(`http://127.0.0.1:${appPort}/employee/prompt`, {
       data: {
         tenantId: 'tenant-a',
         timestampUtcIso: '2026-03-24T09:00:00.000Z',
@@ -74,7 +94,8 @@ test.describe('runtime CUJs', () => {
   });
 
   test('CUJ: queue advances and eventually returns no question', async ({ request }) => {
-    const upsert = await request.post('/admin/questions', {
+    const { appPort } = await contextPromise;
+    const upsert = await request.post(`http://127.0.0.1:${appPort}/admin/questions`, {
       data: {
         tenantId: 'tenant-queue',
         questions: [
@@ -84,7 +105,7 @@ test.describe('runtime CUJs', () => {
             text: 'Question A',
             category: 'engagement',
             tags: ['daily'],
-            options: ['1', '2'],
+            options: [{ text: '1', points: 50 }, { text: '2', points: 100 }],
             points: 10,
             allow_comments: true,
             schedule: { type: 'queue' },
@@ -96,7 +117,7 @@ test.describe('runtime CUJs', () => {
             text: 'Question B',
             category: 'engagement',
             tags: ['daily'],
-            options: ['1', '2'],
+            options: [{ text: '1', points: 50 }, { text: '2', points: 100 }],
             points: 10,
             allow_comments: true,
             schedule: { type: 'queue' },
@@ -107,7 +128,7 @@ test.describe('runtime CUJs', () => {
     });
     expect(upsert.ok()).toBeTruthy();
 
-    const first = await request.post('/employee/prompt', {
+    const first = await request.post(`http://127.0.0.1:${appPort}/employee/prompt`, {
       data: {
         tenantId: 'tenant-queue',
         timestampUtcIso: '2026-03-24T09:00:00.000Z',
@@ -122,7 +143,7 @@ test.describe('runtime CUJs', () => {
     const firstBody = await first.json();
     expect(firstBody.question.id).toBe('q-queue-a');
 
-    const second = await request.post('/employee/prompt', {
+    const second = await request.post(`http://127.0.0.1:${appPort}/employee/prompt`, {
       data: {
         tenantId: 'tenant-queue',
         timestampUtcIso: '2026-03-25T09:00:00.000Z',
@@ -137,7 +158,7 @@ test.describe('runtime CUJs', () => {
     const secondBody = await second.json();
     expect(secondBody.question.id).toBe('q-queue-b');
 
-    const third = await request.post('/employee/prompt', {
+    const third = await request.post(`http://127.0.0.1:${appPort}/employee/prompt`, {
       data: {
         tenantId: 'tenant-queue',
         timestampUtcIso: '2026-03-26T09:00:00.000Z',
@@ -154,7 +175,8 @@ test.describe('runtime CUJs', () => {
   });
 
   test('CUJ: manager subtree targeting limits who gets the question', async ({ request }) => {
-    const upsert = await request.post('/admin/questions', {
+    const { appPort } = await contextPromise;
+    const upsert = await request.post(`http://127.0.0.1:${appPort}/admin/questions`, {
       data: {
         tenantId: 'tenant-target',
         questions: [
@@ -164,7 +186,7 @@ test.describe('runtime CUJs', () => {
             text: 'Targeted question',
             category: 'execution',
             tags: ['mgr'],
-            options: ['1', '2'],
+            options: [{ text: '1', points: 50 }, { text: '2', points: 100 }],
             points: 10,
             allow_comments: true,
             schedule: { type: 'queue' },
@@ -175,7 +197,7 @@ test.describe('runtime CUJs', () => {
     });
     expect(upsert.ok()).toBeTruthy();
 
-    const matching = await request.post('/employee/prompt', {
+    const matching = await request.post(`http://127.0.0.1:${appPort}/employee/prompt`, {
       data: {
         tenantId: 'tenant-target',
         timestampUtcIso: '2026-03-24T09:00:00.000Z',
@@ -190,7 +212,7 @@ test.describe('runtime CUJs', () => {
     const matchingBody = await matching.json();
     expect(matchingBody.question.id).toBe('q-targeted');
 
-    const nonMatching = await request.post('/employee/prompt', {
+    const nonMatching = await request.post(`http://127.0.0.1:${appPort}/employee/prompt`, {
       data: {
         tenantId: 'tenant-target',
         timestampUtcIso: '2026-03-24T09:00:00.000Z',
@@ -207,7 +229,8 @@ test.describe('runtime CUJs', () => {
   });
 
   test('CUJ: admin preview resolves expected question for profile+date', async ({ request }) => {
-    await request.post('/admin/questions', {
+    const { appPort } = await contextPromise;
+    await request.post(`http://127.0.0.1:${appPort}/admin/questions`, {
       data: {
         tenantId: 'tenant-preview',
         questions: [
@@ -217,7 +240,7 @@ test.describe('runtime CUJs', () => {
             text: 'Preview question',
             category: 'execution',
             tags: ['preview'],
-            options: ['1', '2'],
+            options: [{ text: '1', points: 50 }, { text: '2', points: 100 }],
             points: 10,
             allow_comments: true,
             schedule: { type: 'specific_date', date: '2026-03-25' },
@@ -227,7 +250,7 @@ test.describe('runtime CUJs', () => {
       }
     });
 
-    const preview = await request.post('/admin/preview', {
+    const preview = await request.post(`http://127.0.0.1:${appPort}/admin/preview`, {
       data: {
         tenantId: 'tenant-preview',
         timestampUtcIso: '2026-03-25T09:00:00.000Z',
@@ -246,7 +269,8 @@ test.describe('runtime CUJs', () => {
   });
 
   test('CUJ: invalid authoring payload is rejected', async ({ request }) => {
-    const upsert = await request.post('/admin/questions', {
+    const { appPort } = await contextPromise;
+    const upsert = await request.post(`http://127.0.0.1:${appPort}/admin/questions`, {
       data: {
         tenantId: 'tenant-invalid',
         questions: [
@@ -256,7 +280,7 @@ test.describe('runtime CUJs', () => {
             text: 'Invalid question',
             category: 'engagement',
             tags: ['daily'],
-            options: ['1'],
+            options: [{ text: '1', points: 100 }],
             points: 10,
             allow_comments: true,
             schedule: {

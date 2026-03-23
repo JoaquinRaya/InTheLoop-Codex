@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.base.json --noEmit",
     "start:api": "pnpm --filter @in-the-loop/adapters start",
     "deploy:local": "docker compose up --build",
+    "up:fresh": "powershell -ExecutionPolicy Bypass -File ./scripts/up-fresh.ps1",
     "e2e": "playwright test"
   },
   "devDependencies": {

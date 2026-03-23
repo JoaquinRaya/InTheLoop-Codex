@@ -22,6 +22,7 @@ To maximize user verifiability and reduce audit complexity, the system should be
 Hexagonal ports-and-adapters plus red-green-refactor-document TDD are formalized here:
 - `engineering/IMPLEMENTATION_GUARDRAILS.md`
 - `engineering/MONOREPO_TECH_SPEC.md`
+- `engineering/ADMIN_UI_AND_OPTIONS_MODEL_MIGRATION_2026-03-23.md`
 
 ## Important caveat
 

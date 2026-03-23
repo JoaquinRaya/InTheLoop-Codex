@@ -31,7 +31,7 @@ export type AuthoringQuestionInput = Readonly<{
   readonly text: string;
   readonly category: string;
   readonly tags: readonly string[];
-  readonly options: readonly string[];
+  readonly options: readonly Readonly<{ readonly text: string; readonly points: number }>[];
   readonly points: number;
   readonly allow_comments: boolean;
   readonly schedule: AuthoringScheduleInput;

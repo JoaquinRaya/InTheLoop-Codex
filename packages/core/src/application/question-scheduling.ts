@@ -58,13 +58,18 @@ export type QueueSchedule = Readonly<{
 
 export type QuestionSchedule = SpecificDateSchedule | RecurringSchedule | QueueSchedule;
 
+export type ScheduledQuestionOption = Readonly<{
+  readonly text: string;
+  readonly points: number;
+}>;
+
 export type ScheduledQuestion = Readonly<{
   readonly id: string;
   readonly createdAt: string;
   readonly text: string;
   readonly category: string;
   readonly tags: readonly string[];
-  readonly options: readonly string[];
+  readonly options: readonly ScheduledQuestionOption[];
   readonly points: number;
   readonly allowComments: boolean;
   readonly schedule: QuestionSchedule;

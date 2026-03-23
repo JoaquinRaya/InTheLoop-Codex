@@ -6,8 +6,9 @@ import {
   type QuestionSelectionState
 } from '../../../core/src/application/question-scheduling.js';
 import { left, right, type Either } from '../../../core/src/domain/either.js';
+import type { ResponsePayload } from '../../../core/src/domain/response-payload.js';
 import type { StoredQuestionSelectionState } from '../../../core/src/ports/driven/for-question-selection-state-storage.js';
-import type { RuntimeStore } from './runtime-store.js';
+import type { RuntimeStore, StoredScoreRecord } from './runtime-store.js';
 
 type QuestionRow = QueryResultRow & Readonly<{
   readonly payload: string;
@@ -16,6 +17,16 @@ type QuestionRow = QueryResultRow & Readonly<{
 type SelectionRow = QueryResultRow & Readonly<{
   readonly state: string;
   readonly version: number;
+}>;
+
+type ScoreRow = QueryResultRow & Readonly<{
+  readonly question_id: string;
+  readonly normalized_score: number;
+  readonly optional_comment: string | null;
+  readonly manager_email: string;
+  readonly role: string;
+  readonly level: string;
+  readonly survey_day: string;
 }>;
 
 /**
@@ -61,6 +72,20 @@ export class PostgresRuntimeStore implements RuntimeStore {
         tenant_id TEXT PRIMARY KEY,
         state JSONB NOT NULL,
         version INTEGER NOT NULL
+      );
+    `);
+
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS response_scores (
+        id BIGSERIAL PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        question_id TEXT NOT NULL,
+        normalized_score INTEGER NOT NULL,
+        optional_comment TEXT NULL,
+        manager_email TEXT NOT NULL,
+        role TEXT NOT NULL,
+        level TEXT NOT NULL,
+        survey_day TEXT NOT NULL
       );
     `);
   }
@@ -111,6 +136,61 @@ export class PostgresRuntimeStore implements RuntimeStore {
     );
 
     return result.rows.map((row: QuestionRow) => parseQuestion(row.payload));
+  }
+
+  /**
+   * saveScore.
+   */
+  public async saveScore(tenantId: string, payload: ResponsePayload): Promise<void> {
+    await this.pool.query(
+      `
+        INSERT INTO response_scores (
+          tenant_id,
+          question_id,
+          normalized_score,
+          optional_comment,
+          manager_email,
+          role,
+          level,
+          survey_day
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+      [
+        tenantId,
+        payload.questionId,
+        payload.normalizedScore,
+        payload.optionalComment._tag === 'Some' ? payload.optionalComment.value : null,
+        payload.managerEmail,
+        payload.role,
+        payload.level,
+        payload.surveyDay
+      ]
+    );
+  }
+
+  /**
+   * loadScores.
+   */
+  public async loadScores(tenantId: string): Promise<readonly StoredScoreRecord[]> {
+    const result = await this.pool.query<ScoreRow>(
+      `
+        SELECT question_id, normalized_score, optional_comment, manager_email, role, level, survey_day
+        FROM response_scores
+        WHERE tenant_id = $1
+      `,
+      [tenantId]
+    );
+
+    return result.rows.map((row) => ({
+      questionId: row.question_id,
+      normalizedScore: row.normalized_score,
+      optionalComment: row.optional_comment,
+      managerEmail: row.manager_email,
+      role: row.role,
+      level: row.level,
+      surveyDay: row.survey_day
+    }));
   }
 
   /**
