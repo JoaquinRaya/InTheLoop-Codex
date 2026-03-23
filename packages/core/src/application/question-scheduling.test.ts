@@ -686,23 +686,30 @@ describe('question scheduling', () => {
   });
 
   it('persists queue-consumption state through storage port using optimistic concurrency', () => {
-    let state = createEmptyQuestionSelectionState();
-    let version = 2;
+    const stateContainer = new Map<'state', ReturnType<typeof createEmptyQuestionSelectionState>>([
+      ['state', createEmptyQuestionSelectionState()]
+    ]);
+    const versionContainer = new Map<'version', number>([['version', 2]]);
 
     const persisted = selectAndPersistQuestionForEmployeeMoment(
       'tenant-a',
       { timestampUtcIso: '2026-03-22T12:00:00.000Z', timeZone: 'UTC' },
       [baseQuestion({ id: 'q-queue-1', schedule: { type: 'queue' } })],
       {
-        loadState: () => ({ state, version }),
+        loadState: () => ({
+          state: stateContainer.get('state') ?? createEmptyQuestionSelectionState(),
+          version: versionContainer.get('version') ?? 0
+        }),
         saveState: (_tenantId, nextState, expectedVersion) => {
-          if (expectedVersion !== version) {
+          const currentVersion = versionContainer.get('version') ?? 0;
+
+          if (expectedVersion !== currentVersion) {
             return left('VERSION_CONFLICT');
           }
 
-          state = nextState;
-          version += 1;
-          return right(version);
+          stateContainer.set('state', nextState);
+          versionContainer.set('version', currentVersion + 1);
+          return right(versionContainer.get('version') ?? currentVersion + 1);
         }
       },
       workingDayPolicy
@@ -713,7 +720,9 @@ describe('question scheduling', () => {
       expect(persisted.right.question?.id).toBe('q-queue-1');
     }
 
-    expect(state.consumedQueueQuestionIds).toEqual(['q-queue-1']);
+    expect((stateContainer.get('state') ?? createEmptyQuestionSelectionState()).consumedQueueQuestionIds).toEqual([
+      'q-queue-1'
+    ]);
   });
 
   it('returns VERSION_CONFLICT when concurrent state update wins', () => {

@@ -9,8 +9,8 @@ import {
 } from '../../../../core/src/application/submission-pipeline.js';
 
 export type ForAnonymousSubmissionQueue = Readonly<{
-  loadPendingEnvelopes: () => ReadonlyArray<AnonymousSubmissionEnvelope>;
-  persistShuffledBatch: (batch: AnonymousSubmissionBatch) => void;
+  readonly loadPendingEnvelopes: () => ReadonlyArray<AnonymousSubmissionEnvelope>;
+  readonly persistShuffledBatch: (batch: AnonymousSubmissionBatch) => void;
 }>;
 
 export type ProcessAnonymousSubmissionBatchInput = Omit<BuildAnonymousSubmissionBatchInput, 'envelopes'> &
@@ -42,18 +42,27 @@ export type InMemoryAnonymousSubmissionQueue = ForAnonymousSubmissionQueue &
   }>;
 
 export const createInMemoryAnonymousSubmissionQueue = (): InMemoryAnonymousSubmissionQueue => {
-  let pending: ReadonlyArray<AnonymousSubmissionEnvelope> = [];
-  let persisted: ReadonlyArray<AnonymousSubmissionBatch> = [];
+  const pendingStore = new Map<'pending', ReadonlyArray<AnonymousSubmissionEnvelope>>([
+    ['pending', []]
+  ]);
+  const persistedStore = new Map<'persisted', ReadonlyArray<AnonymousSubmissionBatch>>([
+    ['persisted', []]
+  ]);
+
+  const loadPending = (): ReadonlyArray<AnonymousSubmissionEnvelope> =>
+    pendingStore.get('pending') ?? [];
+  const loadPersisted = (): ReadonlyArray<AnonymousSubmissionBatch> =>
+    persistedStore.get('persisted') ?? [];
 
   return {
     enqueue: (envelope) => {
-      pending = [...pending, envelope];
+      pendingStore.set('pending', [...loadPending(), envelope]);
     },
-    loadPendingEnvelopes: () => pending,
+    loadPendingEnvelopes: () => loadPending(),
     persistShuffledBatch: (batch) => {
-      persisted = [...persisted, batch];
-      pending = [];
+      persistedStore.set('persisted', [...loadPersisted(), batch]);
+      pendingStore.set('pending', []);
     },
-    readPersistedBatches: () => persisted
+    readPersistedBatches: () => loadPersisted()
   };
 };

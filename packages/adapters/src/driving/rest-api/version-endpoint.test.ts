@@ -11,11 +11,24 @@ describe('buildVersionEndpointResponse', () => {
       configSchemaVersion: 'v1',
       sourceRepositoryUrl: 'https://example.com/repo',
       reproducibleBuildInstructionsUrl: 'https://example.com/repo/build.md',
-      runtimeAttestationStatus: 'VERIFIED'
+      runtimeAttestationStatus: 'VERIFIED',
+      publishedArtifactHashes: {
+        serverBinaryHash: 'sha256:binary123',
+        policyHash: 'sha256:policy123',
+        buildProvenanceHash: 'sha256:provenance123'
+      },
+      attestationReportDownloadUrl: 'https://example.com/attestation/report.json'
     });
 
     expect(response.assuranceLevel).toBe('HIGH_ASSURANCE');
     expect(response.reducedAssuranceDisclosure).toBe(null);
+    expect(response.buildHashMatchesExpected).toBe(true);
+    expect(response.expectedBuildHash).toBe('sha256:abc123');
+    expect(response.attestationReport).toEqual({
+      downloadUrl: 'https://example.com/attestation/report.json',
+      explanation: 'Runtime attestation verified: measured runtime matches published artifact policy.'
+    });
+    expect(response.publishedArtifactHashes.policyHash).toBe('sha256:policy123');
   });
 
   it('returns a reduced assurance disclosure when attestation is unavailable', () => {
@@ -27,10 +40,19 @@ describe('buildVersionEndpointResponse', () => {
       configSchemaVersion: 'v1',
       sourceRepositoryUrl: 'https://example.com/repo',
       reproducibleBuildInstructionsUrl: 'https://example.com/repo/build.md',
-      runtimeAttestationStatus: 'UNAVAILABLE'
+      runtimeAttestationStatus: 'UNAVAILABLE',
+      publishedArtifactHashes: {
+        serverBinaryHash: 'sha256:binary123',
+        policyHash: 'sha256:policy123',
+        buildProvenanceHash: 'sha256:provenance123'
+      }
     });
 
     expect(response.assuranceLevel).toBe('REDUCED_ASSURANCE');
     expect(response.reducedAssuranceDisclosure).toContain('ATTESTATION_UNAVAILABLE');
+    expect(response.attestationReport).toEqual({
+      downloadUrl: null,
+      explanation: 'Runtime attestation is unavailable for this deployment; verify published artifact hashes manually.'
+    });
   });
 });

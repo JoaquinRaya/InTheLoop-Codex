@@ -62,8 +62,7 @@ export const applyAdminQuestionEdit = (
   }
 
   return right({
-    ...updated,
-    firstDisplayedAt: existing.firstDisplayedAt
+    ...updated
   });
 };
 

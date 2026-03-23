@@ -292,12 +292,13 @@ export const handleEmployeePromptAction = (input: PromptActionInput): PromptActi
 export const createInMemoryEmployeePromptStateStore = (
   initialState: EmployeeClientLocalState = createEmptyEmployeeClientLocalState()
 ): EmployeePromptLocalStateStore => {
-  let currentState = initialState;
+  const stateStore = new Map<'current', EmployeeClientLocalState>([['current', initialState]]);
+  const currentState = (): EmployeeClientLocalState => stateStore.get('current') ?? initialState;
 
   return {
-    loadState: () => currentState,
+    loadState: () => currentState(),
     saveState: (state) => {
-      currentState = state;
+      stateStore.set('current', state);
     }
   };
 };

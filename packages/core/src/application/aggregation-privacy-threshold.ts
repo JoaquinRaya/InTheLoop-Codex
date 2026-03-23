@@ -73,9 +73,9 @@ const averageScore = (responses: ReadonlyArray<ResponsePayload>): number =>
   responses.reduce((total, response) => total + response.normalizedScore, 0) / responses.length;
 
 const commentsFromResponses = (responses: ReadonlyArray<ResponsePayload>): ReadonlyArray<string> =>
-  responses
-    .filter((response) => isSome(response.optionalComment))
-    .map((response) => response.optionalComment.value);
+  responses.flatMap((response) =>
+    isSome(response.optionalComment) ? [response.optionalComment.value] : []
+  );
 
 const computeComparison = (
   currentAverage: number,

@@ -4,6 +4,7 @@ import {
   type VersionEndpointInput,
   type VersionEndpointResponse
 } from '../rest-api/version-endpoint.js';
+import { buildStrongAnonymityDisclosure } from '../../../../core/src/domain/prd-10-strong-anonymity.js';
 
 export type PackagingStatus = 'PACKAGED_AND_ENCRYPTED' | 'NOT_PACKAGED';
 
@@ -16,9 +17,17 @@ export type TransparencyPanelModel = Readonly<{
   readonly serverVersion: Readonly<{
     readonly commitHash: string;
     readonly buildHash: string;
+    readonly expectedBuildHash: string;
+    readonly buildHashMatchesExpected: boolean;
+    readonly publishedArtifactHashes: VersionEndpointResponse['publishedArtifactHashes'];
     readonly runtimeAttestationStatus: VersionEndpointResponse['runtimeAttestationStatus'];
   }>;
   readonly sourceRepositoryUrl: string;
+  readonly reproducibleBuildInstructionsUrl: string;
+  readonly attestationReportDownloadUrl: string | null;
+  readonly attestationExplanation: string;
+  readonly anonymityGuaranteeStatement: string;
+  readonly trustAssumptions: ReadonlyArray<string>;
 }>;
 
 const toPackagingStatusLabel = (packagingStatus: PackagingStatus): string =>
@@ -39,6 +48,7 @@ export const createTransparencyPanelModel = (
       : JSON.stringify(payload, null, 2);
 
   const versionResponse = buildVersionEndpointResponse(versionInput);
+  const strongAnonymityDisclosure = buildStrongAnonymityDisclosure();
 
   return {
     outboundPayloadPreview,
@@ -49,8 +59,16 @@ export const createTransparencyPanelModel = (
     serverVersion: {
       commitHash: versionResponse.commitHash,
       buildHash: versionResponse.buildHash,
+      expectedBuildHash: versionResponse.expectedBuildHash,
+      buildHashMatchesExpected: versionResponse.buildHashMatchesExpected,
+      publishedArtifactHashes: versionResponse.publishedArtifactHashes,
       runtimeAttestationStatus: versionResponse.runtimeAttestationStatus
     },
-    sourceRepositoryUrl: versionResponse.sourceRepositoryUrl
+    sourceRepositoryUrl: versionResponse.sourceRepositoryUrl,
+    reproducibleBuildInstructionsUrl: versionResponse.reproducibleBuildInstructionsUrl,
+    attestationReportDownloadUrl: versionResponse.attestationReport.downloadUrl,
+    attestationExplanation: versionResponse.attestationReport.explanation,
+    anonymityGuaranteeStatement: strongAnonymityDisclosure.guaranteeStatement,
+    trustAssumptions: strongAnonymityDisclosure.trustAssumptions
   };
 };

@@ -13,6 +13,12 @@ export type VersionEndpointInput = Readonly<{
   readonly sourceRepositoryUrl: string;
   readonly reproducibleBuildInstructionsUrl: string;
   readonly runtimeAttestationStatus: RuntimeAttestationStatus;
+  readonly publishedArtifactHashes: Readonly<{
+    readonly serverBinaryHash: string;
+    readonly policyHash: string;
+    readonly buildProvenanceHash: string;
+  }>;
+  readonly attestationReportDownloadUrl?: string;
 }>;
 
 export type VersionEndpointResponse = Readonly<{
@@ -22,7 +28,18 @@ export type VersionEndpointResponse = Readonly<{
   readonly configSchemaVersion: string;
   readonly sourceRepositoryUrl: string;
   readonly reproducibleBuildInstructionsUrl: string;
+  readonly expectedBuildHash: string;
+  readonly buildHashMatchesExpected: boolean;
+  readonly publishedArtifactHashes: Readonly<{
+    readonly serverBinaryHash: string;
+    readonly policyHash: string;
+    readonly buildProvenanceHash: string;
+  }>;
   readonly runtimeAttestationStatus: RuntimeAttestationStatus;
+  readonly attestationReport: Readonly<{
+    readonly downloadUrl: string | null;
+    readonly explanation: string;
+  }>;
   readonly assuranceLevel: 'HIGH_ASSURANCE' | 'REDUCED_ASSURANCE';
   readonly reducedAssuranceDisclosure: string | null;
 }>;
@@ -44,8 +61,21 @@ const toRuntimeSignals = (input: VersionEndpointInput): RuntimeVerificationSigna
   expectedBuildHash: input.expectedBuildHash
 });
 
+const toAttestationExplanation = (status: RuntimeAttestationStatus): string => {
+  if (status === 'VERIFIED') {
+    return 'Runtime attestation verified: measured runtime matches published artifact policy.';
+  }
+
+  if (status === 'FAILED') {
+    return 'Runtime attestation failed: measured runtime did not satisfy published artifact policy.';
+  }
+
+  return 'Runtime attestation is unavailable for this deployment; verify published artifact hashes manually.';
+};
+
 export const buildVersionEndpointResponse = (input: VersionEndpointInput): VersionEndpointResponse => {
   const summary = determineTrustAssurance(toRuntimeSignals(input));
+  const buildHashMatchesExpected = input.buildHash === input.expectedBuildHash;
 
   return {
     commitHash: input.commitHash,
@@ -54,7 +84,14 @@ export const buildVersionEndpointResponse = (input: VersionEndpointInput): Versi
     configSchemaVersion: input.configSchemaVersion,
     sourceRepositoryUrl: input.sourceRepositoryUrl,
     reproducibleBuildInstructionsUrl: input.reproducibleBuildInstructionsUrl,
+    expectedBuildHash: input.expectedBuildHash,
+    buildHashMatchesExpected,
+    publishedArtifactHashes: input.publishedArtifactHashes,
     runtimeAttestationStatus: input.runtimeAttestationStatus,
+    attestationReport: {
+      downloadUrl: input.attestationReportDownloadUrl ?? null,
+      explanation: toAttestationExplanation(input.runtimeAttestationStatus)
+    },
     assuranceLevel: summary.assuranceLevel,
     reducedAssuranceDisclosure:
       summary.disclosureReason === 'NONE'
