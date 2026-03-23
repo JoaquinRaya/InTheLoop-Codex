@@ -30,11 +30,17 @@ export type TransparencyPanelModel = Readonly<{
   readonly trustAssumptions: ReadonlyArray<string>;
 }>;
 
+/**
+ * toPackagingStatusLabel.
+ */
 const toPackagingStatusLabel = (packagingStatus: PackagingStatus): string =>
   packagingStatus === 'PACKAGED_AND_ENCRYPTED'
     ? 'Payload packaged and encrypted before transport.'
     : 'Payload not yet packaged for encrypted transport.';
 
+/**
+ * createTransparencyPanelModel.
+ */
 export const createTransparencyPanelModel = (
   payload: Readonly<Partial<Record<string, string | number>>>,
   versionInput: VersionEndpointInput,

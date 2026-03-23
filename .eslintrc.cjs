@@ -12,5 +12,5 @@ module.exports = {
     'functional/prefer-readonly-type': 'error',
     '@typescript-eslint/no-explicit-any': 'error'
   },
-  ignorePatterns: ['dist/**', 'coverage/**']
+  ignorePatterns: ['dist/**', '**/dist/**', 'coverage/**']
 };

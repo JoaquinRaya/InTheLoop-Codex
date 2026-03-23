@@ -102,14 +102,26 @@ export type SelectionContext = Readonly<{
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * isDateString.
+ */
 const isDateString = (value: string): boolean =>
   isoDatePattern.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`));
 
+/**
+ * isDateWithinRange.
+ */
 const isDateWithinRange = (date: string, range: DateRange): boolean => date >= range.startDate && date <= range.endDate;
 
+/**
+ * isSuppressedOnDate.
+ */
 const isSuppressedOnDate = (question: ScheduledQuestion, localDate: string): boolean =>
   question.suppressionWindows.some((range) => isDateWithinRange(localDate, range));
 
+/**
+ * parseDateParts.
+ */
 const parseDateParts = (
   isoDate: string
 ): Readonly<{ readonly year: number; readonly month: number; readonly day: number }> => ({
@@ -118,14 +130,23 @@ const parseDateParts = (
   day: Number.parseInt(isoDate.slice(8, 10), 10)
 });
 
+/**
+ * daysInMonth.
+ */
 const daysInMonth = (year: number, month: number): number => new Date(Date.UTC(year, month, 0)).getUTCDate();
 
 const canonicalTimeZoneAliases = ['UTC', 'Etc/UTC', 'GMT', 'Etc/GMT'] as const;
 
+/**
+ * isValidTimeZone.
+ */
 const isValidTimeZone = (timeZone: string): boolean =>
   canonicalTimeZoneAliases.some((alias) => alias === timeZone) ||
   Intl.supportedValuesOf('timeZone').some((supported) => supported === timeZone);
 
+/**
+ * extractLocalDate.
+ */
 const extractLocalDate = (timestampUtcIso: string, timeZone: string): Either<QuestionSchedulingValidationError, string> => {
   const utcDate = new Date(timestampUtcIso);
 
@@ -159,10 +180,19 @@ const extractLocalDate = (timestampUtcIso: string, timeZone: string): Either<Que
   return right(`${partMap.year}-${partMap.month}-${partMap.day}`);
 };
 
+/**
+ * weekdayFromDate.
+ */
 const weekdayFromDate = (date: string): Weekday => new Date(`${date}T00:00:00.000Z`).getUTCDay() as Weekday;
 
+/**
+ * dayOfMonthFromDate.
+ */
 const dayOfMonthFromDate = (date: string): number => Number.parseInt(date.slice(8, 10), 10);
 
+/**
+ * isLastWeekdayOfMonth.
+ */
 const isLastWeekdayOfMonth = (localDate: string, weekday: Weekday): boolean => {
   if (weekdayFromDate(localDate) !== weekday) {
     return false;
@@ -175,6 +205,9 @@ const isLastWeekdayOfMonth = (localDate: string, weekday: Weekday): boolean => {
   return nextWeek.getUTCMonth() !== current.getUTCMonth();
 };
 
+/**
+ * isNthWeekdayOfMonth.
+ */
 const isNthWeekdayOfMonth = (localDate: string, nth: number, weekday: Weekday): boolean => {
   if (weekdayFromDate(localDate) !== weekday) {
     return false;
@@ -184,9 +217,15 @@ const isNthWeekdayOfMonth = (localDate: string, nth: number, weekday: Weekday): 
   return Math.ceil(dayOfMonth / 7) === nth;
 };
 
+/**
+ * isIntervalMonthsDueOnDate.
+ */
 const isIntervalMonthsDueOnDate = (localDate: string, startDate: string, intervalMonths: number): boolean => {
   const local = parseDateParts(localDate);
   const start = parseDateParts(startDate);
+  /**
+   * monthsDelta.
+   */
   const monthsDelta = (local.year - start.year) * 12 + (local.month - start.month);
 
   if (monthsDelta < 0 || monthsDelta % intervalMonths !== 0) {
@@ -197,6 +236,9 @@ const isIntervalMonthsDueOnDate = (localDate: string, startDate: string, interva
   return local.day === clampedStartDay;
 };
 
+/**
+ * isRecurringScheduleDueOnDate.
+ */
 const isRecurringScheduleDueOnDate = (schedule: RecurringSchedule, localDate: string): boolean => {
   if (localDate < schedule.startDate) {
     return false;
@@ -224,6 +266,9 @@ const isRecurringScheduleDueOnDate = (schedule: RecurringSchedule, localDate: st
   return isLastWeekdayOfMonth(localDate, schedule.rule.weekday);
 };
 
+/**
+ * byMostRecentCreatedAtThenAlphabeticalId.
+ */
 const byMostRecentCreatedAtThenAlphabeticalId = (a: ScheduledQuestion, b: ScheduledQuestion): number => {
   if (a.createdAt > b.createdAt) {
     return -1;
@@ -236,6 +281,9 @@ const byMostRecentCreatedAtThenAlphabeticalId = (a: ScheduledQuestion, b: Schedu
   return a.id.localeCompare(b.id);
 };
 
+/**
+ * recurringPriority.
+ */
 const recurringPriority = (schedule: RecurringSchedule): number => {
   if (schedule.rule.kind === 'interval-days') {
     return schedule.rule.intervalDays;
@@ -256,15 +304,27 @@ type RecurringScheduledQuestion = ScheduledQuestion & Readonly<{ readonly schedu
 type SpecificDateScheduledQuestion = ScheduledQuestion & Readonly<{ readonly schedule: SpecificDateSchedule }>;
 type QueueScheduledQuestion = ScheduledQuestion & Readonly<{ readonly schedule: QueueSchedule }>;
 
+/**
+ * isRecurringScheduledQuestion.
+ */
 const isRecurringScheduledQuestion = (question: ScheduledQuestion): question is RecurringScheduledQuestion =>
   question.schedule.type === 'recurring';
 
+/**
+ * isSpecificDateScheduledQuestion.
+ */
 const isSpecificDateScheduledQuestion = (question: ScheduledQuestion): question is SpecificDateScheduledQuestion =>
   question.schedule.type === 'specific-date';
 
+/**
+ * isQueueScheduledQuestion.
+ */
 const isQueueScheduledQuestion = (question: ScheduledQuestion): question is QueueScheduledQuestion =>
   question.schedule.type === 'queue';
 
+/**
+ * validateDateRange.
+ */
 const validateDateRange = (
   range: DateRange,
   questionId: string
@@ -288,6 +348,9 @@ const validateDateRange = (
   return [];
 };
 
+/**
+ * validateQuestionSchedules.
+ */
 export const validateQuestionSchedules = (
   questions: readonly ScheduledQuestion[]
 ): Either<readonly QuestionSchedulingValidationError[], readonly ScheduledQuestion[]> => {
@@ -379,10 +442,16 @@ export const validateQuestionSchedules = (
   return right(questions);
 };
 
+/**
+ * createEmptyQuestionSelectionState.
+ */
 export const createEmptyQuestionSelectionState = (): QuestionSelectionState => ({
   consumedQueueQuestionIds: []
 });
 
+/**
+ * selectQuestionForEmployeeMoment.
+ */
 export const selectQuestionForEmployeeMoment = (
   context: SelectionContext,
   allQuestions: readonly ScheduledQuestion[],
@@ -477,6 +546,9 @@ export const selectQuestionForEmployeeMoment = (
   });
 };
 
+/**
+ * selectAndPersistQuestionForEmployeeMoment.
+ */
 export const selectAndPersistQuestionForEmployeeMoment = (
   tenantId: string,
   context: SelectionContext,

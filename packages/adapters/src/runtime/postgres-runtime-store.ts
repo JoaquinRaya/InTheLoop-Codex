@@ -18,19 +18,34 @@ type SelectionRow = QueryResultRow & Readonly<{
   readonly version: number;
 }>;
 
+/**
+ * parseQuestion.
+ */
 const parseQuestion = (payload: string): AdminAuthoringQuestion =>
   JSON.parse(payload) as AdminAuthoringQuestion;
 
+/**
+ * parseState.
+ */
 const parseState = (payload: string): QuestionSelectionState =>
   JSON.parse(payload) as QuestionSelectionState;
 
+/**
+ * PostgresRuntimeStore.
+ */
 export class PostgresRuntimeStore implements RuntimeStore {
   private readonly pool: Pool;
 
+  /**
+   * constructor.
+   */
   public constructor(connectionString: string) {
     this.pool = new Pool({ connectionString });
   }
 
+  /**
+   * initialize.
+   */
   public async initialize(): Promise<void> {
     await this.pool.query(`
       CREATE TABLE IF NOT EXISTS admin_questions (
@@ -50,6 +65,9 @@ export class PostgresRuntimeStore implements RuntimeStore {
     `);
   }
 
+  /**
+   * upsertQuestions.
+   */
   public async upsertQuestions(
     tenantId: string,
     questions: readonly AdminAuthoringQuestion[]
@@ -79,6 +97,9 @@ export class PostgresRuntimeStore implements RuntimeStore {
     }
   }
 
+  /**
+   * loadQuestions.
+   */
   public async loadQuestions(tenantId: string): Promise<readonly AdminAuthoringQuestion[]> {
     const result = await this.pool.query<QuestionRow>(
       `
@@ -92,6 +113,9 @@ export class PostgresRuntimeStore implements RuntimeStore {
     return result.rows.map((row: QuestionRow) => parseQuestion(row.payload));
   }
 
+  /**
+   * loadSelectionState.
+   */
   public async loadSelectionState(tenantId: string): Promise<StoredQuestionSelectionState> {
     const result = await this.pool.query<SelectionRow>(
       `
@@ -117,6 +141,9 @@ export class PostgresRuntimeStore implements RuntimeStore {
     };
   }
 
+  /**
+   * saveSelectionState.
+   */
   public async saveSelectionState(
     tenantId: string,
     nextState: QuestionSelectionState,
@@ -167,6 +194,9 @@ export class PostgresRuntimeStore implements RuntimeStore {
     }
   }
 
+  /**
+   * close.
+   */
   public async close(): Promise<void> {
     await this.pool.end();
   }
@@ -178,6 +208,9 @@ export type PromptRequestProfileInput = Readonly<{
   readonly groupIds: readonly string[];
 }>;
 
+/**
+ * toAdminAuthoringProfile.
+ */
 export const toAdminAuthoringProfile = (
   input: PromptRequestProfileInput
 ): AdminAuthoringEmployeeProfile => ({

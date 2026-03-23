@@ -44,10 +44,16 @@ export type VersionEndpointResponse = Readonly<{
   readonly reducedAssuranceDisclosure: string | null;
 }>;
 
+/**
+ * createReducedAssuranceDisclosure.
+ */
 const createReducedAssuranceDisclosure = (
   reason: Exclude<ReturnType<typeof determineTrustAssurance>['disclosureReason'], 'NONE'>
 ): string => `Runtime trust assurance reduced: ${reason}.`;
 
+/**
+ * toRuntimeSignals.
+ */
 const toRuntimeSignals = (input: VersionEndpointInput): RuntimeVerificationSignals => ({
   buildProvenance: {
     commitHash: input.commitHash,
@@ -61,6 +67,9 @@ const toRuntimeSignals = (input: VersionEndpointInput): RuntimeVerificationSigna
   expectedBuildHash: input.expectedBuildHash
 });
 
+/**
+ * toAttestationExplanation.
+ */
 const toAttestationExplanation = (status: RuntimeAttestationStatus): string => {
   if (status === 'VERIFIED') {
     return 'Runtime attestation verified: measured runtime matches published artifact policy.';
@@ -73,6 +82,9 @@ const toAttestationExplanation = (status: RuntimeAttestationStatus): string => {
   return 'Runtime attestation is unavailable for this deployment; verify published artifact hashes manually.';
 };
 
+/**
+ * buildVersionEndpointResponse.
+ */
 export const buildVersionEndpointResponse = (input: VersionEndpointInput): VersionEndpointResponse => {
   const summary = determineTrustAssurance(toRuntimeSignals(input));
   const buildHashMatchesExpected = input.buildHash === input.expectedBuildHash;

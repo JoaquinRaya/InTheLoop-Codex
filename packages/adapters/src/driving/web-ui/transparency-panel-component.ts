@@ -1,5 +1,8 @@
 import type { TransparencyPanelModel } from './transparency-panel-model.js';
 
+/**
+ * renderTransparencyPanelComponent.
+ */
 export const renderTransparencyPanelComponent = (model: TransparencyPanelModel): string => {
   const reducedAssuranceDisclosure =
     model.reducedAssuranceDisclosure === null

@@ -12,6 +12,9 @@ export type EmployeeDailyPromptComponentInput = Readonly<{
   readonly model: EmployeePromptPresentationModel;
 }>;
 
+/**
+ * renderOptions.
+ */
 const renderOptions = (questionId: string, options: readonly EmployeePromptQuestionOption[]): string =>
   options
     .map(
@@ -20,6 +23,9 @@ const renderOptions = (questionId: string, options: readonly EmployeePromptQuest
     )
     .join('');
 
+/**
+ * renderEmployeeDailyPromptComponent.
+ */
 export const renderEmployeeDailyPromptComponent = (
   input: EmployeeDailyPromptComponentInput
 ): string => {

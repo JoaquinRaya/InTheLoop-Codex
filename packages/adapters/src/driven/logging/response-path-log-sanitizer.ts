@@ -9,9 +9,15 @@ export interface ResponsePathLogEvent {
 
 const denyPatternParts = ['ip', 'x_forwarded_for', 'forwarded', 'request_id', 'correlation_id'] as const;
 
+/**
+ * containsDeniedPattern.
+ */
 const containsDeniedPattern = (key: string): boolean =>
   denyPatternParts.some((part) => key.toLowerCase().includes(part));
 
+/**
+ * sanitizeValue.
+ */
 const sanitizeValue = (value: LogValue): LogValue => {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value;
@@ -20,6 +26,9 @@ const sanitizeValue = (value: LogValue): LogValue => {
   return sanitizeResponsePathLogEvent(value);
 };
 
+/**
+ * sanitizeResponsePathLogEvent.
+ */
 export const sanitizeResponsePathLogEvent = (
   event: ResponsePathLogEvent
 ): ResponsePathLogEvent =>

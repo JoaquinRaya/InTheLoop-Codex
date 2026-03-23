@@ -18,6 +18,9 @@ export type ProcessAnonymousSubmissionBatchInput = Omit<BuildAnonymousSubmission
     readonly queue: ForAnonymousSubmissionQueue;
   }>;
 
+/**
+ * processAnonymousSubmissionBatch.
+ */
 export const processAnonymousSubmissionBatch = (
   input: ProcessAnonymousSubmissionBatchInput
 ): Either<SubmissionPipelineError, AnonymousSubmissionBatch> => {
@@ -41,6 +44,9 @@ export type InMemoryAnonymousSubmissionQueue = ForAnonymousSubmissionQueue &
     readonly readPersistedBatches: () => ReadonlyArray<AnonymousSubmissionBatch>;
   }>;
 
+/**
+ * createInMemoryAnonymousSubmissionQueue.
+ */
 export const createInMemoryAnonymousSubmissionQueue = (): InMemoryAnonymousSubmissionQueue => {
   const pendingStore = new Map<'pending', ReadonlyArray<AnonymousSubmissionEnvelope>>([
     ['pending', []]
@@ -49,8 +55,14 @@ export const createInMemoryAnonymousSubmissionQueue = (): InMemoryAnonymousSubmi
     ['persisted', []]
   ]);
 
+  /**
+   * loadPending.
+   */
   const loadPending = (): ReadonlyArray<AnonymousSubmissionEnvelope> =>
     pendingStore.get('pending') ?? [];
+  /**
+   * loadPersisted.
+   */
   const loadPersisted = (): ReadonlyArray<AnonymousSubmissionBatch> =>
     persistedStore.get('persisted') ?? [];
 

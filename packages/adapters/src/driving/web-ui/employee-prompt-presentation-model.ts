@@ -16,6 +16,9 @@ export type EmployeePromptPresentationInput = Readonly<{
   readonly commentEnabled: boolean;
 }>;
 
+/**
+ * createEmployeePromptPresentationModel.
+ */
 export const createEmployeePromptPresentationModel = (
   input: EmployeePromptPresentationInput
 ): EmployeePromptPresentationModel => ({

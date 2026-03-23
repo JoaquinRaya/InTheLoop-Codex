@@ -27,6 +27,9 @@ export type BrowserSignInResult = Readonly<{
   readonly reason: 'NOT_COMPANY_COMPUTER' | 'PROMPT_NOT_AVAILABLE' | 'PROMPT_RENDERED';
 }>;
 
+/**
+ * runPromptOnEmployeeSignIn.
+ */
 export const runPromptOnEmployeeSignIn = (input: BrowserSignInInput): BrowserSignInResult => {
   if (!input.isCompanyComputer) {
     return {
@@ -64,6 +67,9 @@ export type BrowserPromptActionInput = Readonly<{
   readonly anonymousSubmissionTransport: AnonymousSubmissionTransportInput | null;
 }>;
 
+/**
+ * skipPromptInBrowserRuntime.
+ */
 export const skipPromptInBrowserRuntime = (input: BrowserPromptActionInput): PromptActionResult =>
   handleEmployeePromptAction({
     localDay: input.localDay,

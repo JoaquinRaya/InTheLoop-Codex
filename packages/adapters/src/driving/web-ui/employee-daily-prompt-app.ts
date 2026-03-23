@@ -293,6 +293,9 @@ export const createInMemoryEmployeePromptStateStore = (
   initialState: EmployeeClientLocalState = createEmptyEmployeeClientLocalState()
 ): EmployeePromptLocalStateStore => {
   const stateStore = new Map<'current', EmployeeClientLocalState>([['current', initialState]]);
+  /**
+   * currentState.
+   */
   const currentState = (): EmployeeClientLocalState => stateStore.get('current') ?? initialState;
 
   return {

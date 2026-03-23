@@ -9,6 +9,9 @@ const trustAssumptions = [
   'Trust-separated operational controls (build, policy publication, and runtime operation) do not collude to falsify evidence.'
 ] as const;
 
+/**
+ * buildStrongAnonymityDisclosure.
+ */
 export const buildStrongAnonymityDisclosure = (): StrongAnonymityDisclosure => ({
   guaranteeStatement:
     'Response unlinkability is computationally infeasible under vetted cryptographic primitives and explicit trust assumptions.',
