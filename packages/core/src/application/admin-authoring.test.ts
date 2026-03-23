@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { none, some } from '../domain/option.js';
 import {
   applyAdminQuestionEdit,
   canEditAdminAuthoringQuestion,
@@ -19,6 +20,8 @@ const queueQuestion = (id: string, target: AdminAuthoringQuestion['target']): Ad
   points: 10,
   allowComments: true,
   schedule: { type: 'queue' },
+  suppressionWindows: [],
+  firstDisplayedAt: none(),
   target
 });
 
@@ -72,7 +75,7 @@ describe('admin authoring', () => {
         timeZone: 'UTC'
       },
       {
-        managerEmail: 'lead@example.com',
+        managerEmail: some('lead@example.com'),
         managerAncestryEmails: ['vp@example.com'],
         groupIds: ['grp-a']
       },
@@ -97,7 +100,7 @@ describe('admin authoring', () => {
     expect(selection._tag).toBe('Right');
 
     if (selection._tag === 'Right') {
-      expect(selection.right.question?.id).toBe('q-mgr');
+      expect(selection.right.question).toEqual(some(expect.objectContaining({ id: 'q-mgr' })));
     }
   });
 
@@ -124,7 +127,7 @@ describe('admin authoring', () => {
         timeZone: 'UTC'
       },
       {
-        managerEmail: 'lead@example.com',
+        managerEmail: some('lead@example.com'),
         managerAncestryEmails: [],
         groupIds: ['grp-a']
       },
@@ -141,7 +144,7 @@ describe('admin authoring', () => {
     expect(selection._tag).toBe('Right');
 
     if (selection._tag === 'Right') {
-      expect(selection.right.question?.id).toBe('q-manager');
+      expect(selection.right.question).toEqual(some(expect.objectContaining({ id: 'q-manager' })));
     }
   });
 

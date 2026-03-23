@@ -7,10 +7,15 @@
     "lint": "eslint . --ext .ts,.tsx",
     "check-arch": "depcruise packages --config dependency-cruiser.cjs",
     "build": "pnpm -r build",
-    "typecheck": "tsc -p tsconfig.base.json --noEmit"
+    "typecheck": "tsc -p tsconfig.base.json --noEmit",
+    "start:api": "pnpm --filter @in-the-loop/adapters start",
+    "deploy:local": "docker compose up --build",
+    "e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "1.54.2",
     "@types/node": "22.19.15",
+    "@types/pg": "8.15.6",
     "@typescript-eslint/eslint-plugin": "8.57.1",
     "@typescript-eslint/parser": "8.57.1",
     "@vitest/coverage-v8": "1.6.1",

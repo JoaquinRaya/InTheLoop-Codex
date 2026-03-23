@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { none, some } from '../../../../core/src/domain/option.js';
 import {
   parseAdminAuthoringPreviewInput,
   parseAndValidateAdminAuthoringBatch
@@ -41,7 +42,8 @@ describe('parseAndValidateAdminAuthoringBatch', () => {
     if (parsed._tag === 'Right') {
       expect(parsed.right[0]?.target).toEqual({ type: 'whole-company' });
       expect(parsed.right[1]?.target).toEqual({ type: 'manager-subtree', managerEmail: 'vp@example.com' });
-      expect(parsed.right[1]?.firstDisplayedAt).toBe('2026-03-21T00:00:00.000Z');
+      expect(parsed.right[0]?.firstDisplayedAt).toEqual(none());
+      expect(parsed.right[1]?.firstDisplayedAt).toEqual(some('2026-03-21T00:00:00.000Z'));
     }
   });
 
@@ -87,7 +89,7 @@ describe('parseAdminAuthoringPreviewInput', () => {
       timestampUtcIso: '2026-03-22T09:00:00.000Z',
       timeZone: 'America/New_York',
       profile: {
-        managerEmail: 'lead@example.com',
+        managerEmail: some('lead@example.com'),
         managerAncestryEmails: ['vp@example.com'],
         groupIds: ['grp-1']
       }

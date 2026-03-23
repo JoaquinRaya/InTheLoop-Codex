@@ -6,6 +6,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/runtime/server.js"
+  },
+  "dependencies": {
+    "fastify": "4.29.1",
+    "pg": "8.16.3"
   }
 }

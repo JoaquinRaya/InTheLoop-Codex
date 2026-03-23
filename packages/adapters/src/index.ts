@@ -21,3 +21,6 @@ export * from './driving/rest-api/aggregation-analytics-contract.js';
 export * from './driving/rest-api/dashboard-analytics-contract.js';
 
 export * from './driving/rest-api/admin-authoring-contract.js';
+export * from './runtime/postgres-runtime-store.js';
+export * from './runtime/in-memory-runtime-store.js';
+export * from './runtime/runtime-store.js';

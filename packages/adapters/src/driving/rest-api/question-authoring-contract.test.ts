@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { none } from '../../../../core/src/domain/option.js';
 import { parseAndValidateQuestionAuthoringBatch } from './question-authoring-contract.js';
 
 describe('parseAndValidateQuestionAuthoringBatch', () => {
@@ -50,14 +51,14 @@ describe('parseAndValidateQuestionAuthoringBatch', () => {
       expect(parsed.right[0]?.schedule).toEqual({
         type: 'recurring',
         startDate: '2026-01-01',
-        endDate: undefined,
+        endDate: none(),
         rule: { kind: 'nth-weekday-of-month', nth: 3, weekday: 2 }
       });
 
       expect(parsed.right[1]?.schedule).toEqual({
         type: 'recurring',
         startDate: '2026-01-31',
-        endDate: undefined,
+        endDate: none(),
         rule: { kind: 'interval-months', intervalMonths: 1 }
       });
     }
