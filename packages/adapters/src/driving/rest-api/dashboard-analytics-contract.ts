@@ -37,6 +37,9 @@ export type DashboardAnalyticsApiResponse =
   | DashboardAnalyticsApiInsufficientDataResponse
   | DashboardAnalyticsApiErrorResponse;
 
+/**
+ * mapDrillDownItem.
+ */
 const mapDrillDownItem = (
   item: DashboardDrillDownItem
 ): DashboardAnalyticsApiOkResponse['drill_down'][number] => ({
@@ -49,6 +52,9 @@ const mapDrillDownItem = (
   comments: item.comments
 });
 
+/**
+ * buildDashboardAnalyticsApiResponse.
+ */
 export const buildDashboardAnalyticsApiResponse = (
   result: DashboardAnalyticsResult
 ): DashboardAnalyticsApiOkResponse | DashboardAnalyticsApiInsufficientDataResponse => {
@@ -70,6 +76,9 @@ export const buildDashboardAnalyticsApiResponse = (
   };
 };
 
+/**
+ * buildDashboardAnalyticsApiErrorResponse.
+ */
 export const buildDashboardAnalyticsApiErrorResponse = (
   error: DashboardAnalyticsError
 ): DashboardAnalyticsApiErrorResponse => ({

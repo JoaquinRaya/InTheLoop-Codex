@@ -14,11 +14,17 @@ export const prohibitedIdentityOrCorrelationKeys = [
 export type ProhibitedIdentityOrCorrelationKey =
   (typeof prohibitedIdentityOrCorrelationKeys)[number];
 
+/**
+ * isProhibitedIdentityOrCorrelationKey.
+ */
 export const isProhibitedIdentityOrCorrelationKey = (key: string): boolean =>
   prohibitedIdentityOrCorrelationKeys.some((prohibitedKey) => prohibitedKey === key);
 
 export type ResponsePathLogEvent = Readonly<Record<string, string | number | boolean>>;
 
+/**
+ * redactResponsePathMetadata.
+ */
 export const redactResponsePathMetadata = (
   event: ResponsePathLogEvent
 ): ResponsePathLogEvent =>

@@ -12,6 +12,9 @@ type VersionedState = Readonly<{
   readonly version: number;
 }>;
 
+/**
+ * createInMemoryRuntimeStore.
+ */
 export const createInMemoryRuntimeStore = (): RuntimeStore => {
   const questionMap = new Map<string, readonly AdminAuthoringQuestion[]>();
   const selectionStateMap = new Map<string, VersionedState>();

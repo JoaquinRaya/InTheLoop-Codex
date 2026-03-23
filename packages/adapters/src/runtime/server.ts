@@ -33,6 +33,9 @@ const workCalendarPolicy: ForWorkCalendarPolicy = createTenantWorkCalendarPolicy
   holidays: []
 });
 
+/**
+ * toScheduledQuestions.
+ */
 const toScheduledQuestions = (questions: readonly AdminAuthoringQuestion[]): readonly ScheduledQuestion[] =>
   questions.map((question) => ({
     id: question.id,
@@ -47,6 +50,9 @@ const toScheduledQuestions = (questions: readonly AdminAuthoringQuestion[]): rea
     suppressionWindows: question.suppressionWindows
   }));
 
+/**
+ * targetMatches.
+ */
 const targetMatches = (
   question: AdminAuthoringQuestion,
   profile: AdminAuthoringEmployeeProfile
@@ -65,6 +71,9 @@ const targetMatches = (
   );
 };
 
+/**
+ * sendBadRequest.
+ */
 const sendBadRequest = (reply: FastifyReply, message: string): FastifyReply =>
   reply.code(400).send({
     status: 'error',
@@ -89,7 +98,7 @@ export const createServer = async (
     status: 'ok'
   }));
 
-  fastify.get('/ui', async (_request, reply) =>
+  fastify.get('/ui', async (_request: FastifyRequest, reply: FastifyReply) =>
     reply.type('text/html').send(`<!doctype html>
 <html lang="en">
 <head>
@@ -166,6 +175,9 @@ export const createServer = async (
     const saveQuestionsButton = document.getElementById('saveQuestions');
     const loadPromptButton = document.getElementById('loadPrompt');
 
+    /**
+     * parseCsv.
+     */
     const parseCsv = (value) =>
       value
         .split(',')
@@ -223,8 +235,8 @@ export const createServer = async (
 </html>`));
 
   fastify.post('/admin/questions', async (
-    request: FastifyRequest<{ Body: AdminUpsertBody }>,
-    reply
+    request: FastifyRequest<{ readonly Body: AdminUpsertBody }>,
+    reply: FastifyReply
   ) => {
     const payload = request.body;
     const parsed = parseAndValidateAdminAuthoringBatch({
@@ -245,14 +257,14 @@ export const createServer = async (
 
   fastify.post('/admin/preview', async (
     request: FastifyRequest<{
-      Body: Readonly<{
+      readonly Body: Readonly<{
         readonly tenantId: string;
         readonly timestampUtcIso: string;
         readonly timeZone: string;
         readonly profile: PromptRequestProfileInput;
       }>;
     }>,
-    reply
+    reply: FastifyReply
   ) => {
     const questions = await store.loadQuestions(request.body.tenantId);
     const parsed = parseAdminAuthoringPreviewInput({
@@ -293,8 +305,8 @@ export const createServer = async (
   });
 
   fastify.post('/employee/prompt', async (
-    request: FastifyRequest<{ Body: PromptBody }>,
-    reply
+    request: FastifyRequest<{ readonly Body: PromptBody }>,
+    reply: FastifyReply
   ) => {
     const profile = toAdminAuthoringProfile(request.body.profile);
     const allQuestions = await store.loadQuestions(request.body.tenantId);

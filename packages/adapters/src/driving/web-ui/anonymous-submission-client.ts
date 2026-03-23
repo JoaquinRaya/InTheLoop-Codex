@@ -31,6 +31,9 @@ export type PrepareDelayedAnonymousSubmissionError =
       readonly message: string;
     }>;
 
+/**
+ * prepareDelayedAnonymousSubmission.
+ */
 export const prepareDelayedAnonymousSubmission = (
   input: PrepareDelayedAnonymousSubmissionInput
 ): Either<PrepareDelayedAnonymousSubmissionError, DelayedAnonymousSubmission> => {

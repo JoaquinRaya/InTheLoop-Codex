@@ -42,6 +42,9 @@ export type AuthoringBatchInput = Readonly<{
   readonly questions: readonly AuthoringQuestionInput[];
 }>;
 
+/**
+ * toRecurringRule.
+ */
 const toRecurringRule = (rule: AuthoringRecurringRuleInput): RecurringRule => {
   if (rule.kind === 'interval_days') {
     return {
@@ -71,6 +74,9 @@ const toRecurringRule = (rule: AuthoringRecurringRuleInput): RecurringRule => {
   };
 };
 
+/**
+ * toScheduledQuestion.
+ */
 const toScheduledQuestion = (input: AuthoringQuestionInput): ScheduledQuestion => ({
   id: input.id,
   createdAt: input.created_at,

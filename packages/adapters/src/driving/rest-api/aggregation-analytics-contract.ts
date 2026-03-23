@@ -35,6 +35,9 @@ export type AggregationApiResponse =
   | AggregationApiInsufficientDataResponse
   | AggregationApiThresholdMetResponse;
 
+/**
+ * mapComparison.
+ */
 const mapComparison = (
   comparison: ThresholdMetComparison
 ): AggregationApiThresholdMetResponse['comparison_to_previous_occurrence'] => ({
@@ -43,6 +46,9 @@ const mapComparison = (
   percentage_change_from_previous: comparison.percentageChangeFromPrevious
 });
 
+/**
+ * buildAggregationApiResponse.
+ */
 export const buildAggregationApiResponse = (
   result: QuestionAggregationResult
 ): AggregationApiInsufficientDataResponse | AggregationApiThresholdMetResponse => {
@@ -66,6 +72,9 @@ export const buildAggregationApiResponse = (
   };
 };
 
+/**
+ * buildAggregationApiErrorResponse.
+ */
 export const buildAggregationApiErrorResponse = (
   error: AggregationPolicyError
 ): AggregationApiErrorResponse => ({

@@ -49,6 +49,9 @@ export type AggregationPolicyError = Readonly<{
   readonly message: string;
 }>;
 
+/**
+ * createPolicyError.
+ */
 const createPolicyError = (
   code: AggregationPolicyError['code'],
   message: string
@@ -57,26 +60,41 @@ const createPolicyError = (
   message
 });
 
+/**
+ * normalizeFilterContext.
+ */
 const normalizeFilterContext = (context: AggregationFilterContext): string =>
   Object.keys(context)
     .sort((leftKey, rightKey) => leftKey.localeCompare(rightKey))
     .map((key) => `${key}:${context[key]}`)
     .join('|');
 
+/**
+ * responsesForQuestion.
+ */
 const responsesForQuestion = (
   occurrence: QuestionAggregationOccurrence,
   questionId: string
 ): ReadonlyArray<ResponsePayload> =>
   occurrence.responses.filter((response) => response.questionId === questionId);
 
+/**
+ * averageScore.
+ */
 const averageScore = (responses: ReadonlyArray<ResponsePayload>): number =>
   responses.reduce((total, response) => total + response.normalizedScore, 0) / responses.length;
 
+/**
+ * commentsFromResponses.
+ */
 const commentsFromResponses = (responses: ReadonlyArray<ResponsePayload>): ReadonlyArray<string> =>
   responses.flatMap((response) =>
     isSome(response.optionalComment) ? [response.optionalComment.value] : []
   );
 
+/**
+ * computeComparison.
+ */
 const computeComparison = (
   currentAverage: number,
   previousResponses: ReadonlyArray<ResponsePayload>
@@ -90,6 +108,9 @@ const computeComparison = (
   });
 };
 
+/**
+ * aggregateQuestionAnalyticsWithPrivacyThreshold.
+ */
 export const aggregateQuestionAnalyticsWithPrivacyThreshold = (
   input: AggregateQuestionAnalyticsInput
 ): Either<AggregationPolicyError, QuestionAggregationResult> => {
@@ -146,6 +167,9 @@ export const aggregateQuestionAnalyticsWithPrivacyThreshold = (
   });
 };
 
+/**
+ * aggregateQuestionAnalytics.
+ */
 export const aggregateQuestionAnalytics = (
   input: Omit<AggregateQuestionAnalyticsInput, 'minimumResponseThreshold'>
 ): Either<AggregationPolicyError, QuestionAggregationResult> =>

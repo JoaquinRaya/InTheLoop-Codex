@@ -3,10 +3,8 @@ import { createServer } from '../../packages/adapters/src/runtime/server.js';
 import { createInMemoryRuntimeStore } from '../../packages/adapters/src/runtime/in-memory-runtime-store.js';
 
 test.describe('runtime CUJs', () => {
-  let server: Awaited<ReturnType<typeof createServer>>;
-
-  test.beforeAll(async () => {
-    server = await createServer({
+  const serverPromise = (async (): Promise<Awaited<ReturnType<typeof createServer>>> => {
+    const server = await createServer({
       store: createInMemoryRuntimeStore()
     });
 
@@ -14,9 +12,15 @@ test.describe('runtime CUJs', () => {
       host: '127.0.0.1',
       port: 4173
     });
+    return server;
+  })();
+
+  test.beforeAll(async () => {
+    await serverPromise;
   });
 
   test.afterAll(async () => {
+    const server = await serverPromise;
     await server.close();
   });
 

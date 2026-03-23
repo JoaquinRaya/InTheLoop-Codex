@@ -31,8 +31,14 @@ export type AdminAuthoringValidationError = Readonly<{
   readonly message: string;
 }>;
 
+/**
+ * isValidIsoTimestamp.
+ */
 const isValidIsoTimestamp = (value: string): boolean => !Number.isNaN(Date.parse(value));
 
+/**
+ * targetMatchesProfile.
+ */
 const targetMatchesProfile = (
   target: QuestionAudienceTarget,
   profile: AdminAuthoringEmployeeProfile
@@ -51,9 +57,15 @@ const targetMatchesProfile = (
   );
 };
 
+/**
+ * canEditAdminAuthoringQuestion.
+ */
 export const canEditAdminAuthoringQuestion = (question: AdminAuthoringQuestion): boolean =>
   question.firstDisplayedAt._tag === 'None';
 
+/**
+ * applyAdminQuestionEdit.
+ */
 export const applyAdminQuestionEdit = (
   existing: AdminAuthoringQuestion,
   updated: ScheduledQuestion & Readonly<{ readonly target: QuestionAudienceTarget }>
@@ -71,6 +83,9 @@ export const applyAdminQuestionEdit = (
   });
 };
 
+/**
+ * recordQuestionFirstDisplay.
+ */
 export const recordQuestionFirstDisplay = (
   question: AdminAuthoringQuestion,
   displayedAtIso: string
@@ -92,6 +107,9 @@ export const recordQuestionFirstDisplay = (
   });
 };
 
+/**
+ * previewQuestionResolutionForEmployee.
+ */
 export const previewQuestionResolutionForEmployee = (
   context: SelectionContext,
   profile: AdminAuthoringEmployeeProfile,

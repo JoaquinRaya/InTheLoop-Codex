@@ -34,6 +34,9 @@ export type AdminPreviewInput = Readonly<{
   }>;
 }>;
 
+/**
+ * toAudienceTarget.
+ */
 const toAudienceTarget = (target: AuthoringTargetInput): QuestionAudienceTarget => {
   if (target.type === 'whole_company') {
     return { type: 'whole-company' };
@@ -46,8 +49,14 @@ const toAudienceTarget = (target: AuthoringTargetInput): QuestionAudienceTarget 
   return { type: 'group', groupId: target.group_id };
 };
 
+/**
+ * isValidTimestamp.
+ */
 const isValidTimestamp = (timestamp: string): boolean => !Number.isNaN(Date.parse(timestamp));
 
+/**
+ * parseAndValidateAdminAuthoringBatch.
+ */
 export const parseAndValidateAdminAuthoringBatch = (
   payload: AdminAuthoringBatchInput
 ): Either<readonly string[], readonly AdminAuthoringQuestion[]> => {
@@ -80,6 +89,9 @@ export const parseAndValidateAdminAuthoringBatch = (
   );
 };
 
+/**
+ * parseAdminAuthoringPreviewInput.
+ */
 export const parseAdminAuthoringPreviewInput = (
   payload: AdminPreviewInput
 ): Readonly<{

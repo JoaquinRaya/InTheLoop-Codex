@@ -9,8 +9,14 @@ export type TenantCalendarConfiguration = Readonly<{
   readonly holidays: readonly string[];
 }>;
 
+/**
+ * toSet.
+ */
 const toSet = <T>(values: readonly T[]): ReadonlySet<T> => new Set(values);
 
+/**
+ * weekdayFromIsoDate.
+ */
 const weekdayFromIsoDate = (localDate: string): Weekday => {
   const weekday = new Date(`${localDate}T00:00:00.000Z`).getUTCDay();
   return weekday as Weekday;

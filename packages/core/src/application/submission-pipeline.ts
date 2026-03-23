@@ -34,6 +34,9 @@ export type BuildAnonymousSubmissionBatchInput = Readonly<{
 
 const correlatorPatternParts = ['ip', 'x_forwarded_for', 'forwarded', 'request', 'correlation'] as const;
 
+/**
+ * createPipelineError.
+ */
 const createPipelineError = (
   code: SubmissionPipelineError['code'],
   message: string
@@ -42,11 +45,20 @@ const createPipelineError = (
   message
 });
 
+/**
+ * isUnitIntervalValue.
+ */
 const isUnitIntervalValue = (value: number): boolean => value >= 0 && value < 1;
 
+/**
+ * hasCorrelatorPattern.
+ */
 const hasCorrelatorPattern = (key: string): boolean =>
   correlatorPatternParts.some((part) => key.toLowerCase().includes(part));
 
+/**
+ * sanitizeTransportMetadata.
+ */
 const sanitizeTransportMetadata = (
   metadata: Readonly<Record<string, string>>
 ): Readonly<Record<string, string>> =>
@@ -61,6 +73,9 @@ const sanitizeTransportMetadata = (
     };
   }, {});
 
+/**
+ * computeRandomizedSendDelayMs.
+ */
 export const computeRandomizedSendDelayMs = (
   input: RandomizedSendDelayInput
 ): Either<SubmissionPipelineError, number> => {
@@ -87,6 +102,9 @@ export const computeRandomizedSendDelayMs = (
   return right(input.minDelayMs + Math.floor(range * input.randomUnitInterval));
 };
 
+/**
+ * buildAnonymousSubmissionBatch.
+ */
 export const buildAnonymousSubmissionBatch = (
   input: BuildAnonymousSubmissionBatchInput
 ): Either<SubmissionPipelineError, AnonymousSubmissionBatch> => {

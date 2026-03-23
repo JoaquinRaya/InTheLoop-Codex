@@ -40,16 +40,19 @@ const sleep = async (durationMs: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, durationMs));
 
 const waitForPostgresReady = async (port: number): Promise<void> => {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  const tryReady = async (attempt: number): Promise<void> => {
     try {
       runPostgresCommand(pgIsReadyPath, ['-h', '127.0.0.1', '-p', `${port}`, '-U', 'postgres']);
-      return;
-    } catch (_error) {
+      return undefined;
+    } catch {
+      if (attempt >= 59) {
+        throw new Error(`PostgreSQL did not become ready on port ${port}`);
+      }
       await sleep(500);
+      return tryReady(attempt + 1);
     }
-  }
-
-  throw new Error(`PostgreSQL did not become ready on port ${port}`);
+  };
+  return tryReady(0);
 };
 
 const runPostgresCommand = (command: string, args: readonly string[]): void => {
@@ -62,20 +65,18 @@ const runPostgresCommand = (command: string, args: readonly string[]): void => {
 };
 
 test.describe('browser + real postgres runtime CUJ', () => {
-  let postgresDataDir = '';
-  let server: Awaited<ReturnType<typeof createServer>>;
-
-  let postgresPort = 0;
-  let appPort = 0;
   const databaseName = 'in_the_loop_e2e';
-
-
-  test.beforeAll(async () => {
-    postgresPort = await getAvailablePort();
-    appPort = await getAvailablePort();
+  const contextPromise = (async (): Promise<{
+    readonly postgresDataDir: string;
+    readonly server: Awaited<ReturnType<typeof createServer>>;
+    readonly postgresPort: number;
+    readonly appPort: number;
+  }> => {
+    const postgresPort = await getAvailablePort();
+    const appPort = await getAvailablePort();
     const connectionString = `postgres://postgres@127.0.0.1:${postgresPort}/${databaseName}`;
 
-    postgresDataDir = process.getuid?.() === 0
+    const postgresDataDir = process.getuid?.() === 0
       ? execFileSync('runuser', ['-u', 'postgres', '--', 'mktemp', '-d', '/tmp/itl-pg-data-XXXXXX'], { encoding: 'utf8' }).trim()
       : mkdtempSync(join(tmpdir(), 'itl-pg-data-'));
 
@@ -103,7 +104,7 @@ test.describe('browser + real postgres runtime CUJ', () => {
       databaseName
     ]);
 
-    server = await createServer({
+    const server = await createServer({
       store: new PostgresRuntimeStore(connectionString)
     });
 
@@ -111,25 +112,32 @@ test.describe('browser + real postgres runtime CUJ', () => {
       host: '127.0.0.1',
       port: appPort
     });
+
+    return {
+      postgresDataDir,
+      server,
+      postgresPort,
+      appPort
+    };
+  })();
+
+  test.beforeAll(async () => {
+    await contextPromise;
   });
 
   test.afterAll(async () => {
-    if (server !== undefined) {
-      await server.close();
-    }
-
-    if (postgresDataDir.length > 0) {
-      runPostgresCommand(pgCtlPath, [
-        '-D', postgresDataDir,
-        '-m', 'immediate',
-        'stop'
-      ]);
-
-      rmSync(postgresDataDir, { recursive: true, force: true });
-    }
+    const { server, postgresDataDir } = await contextPromise;
+    await server.close();
+    runPostgresCommand(pgCtlPath, [
+      '-D', postgresDataDir,
+      '-m', 'immediate',
+      'stop'
+    ]);
+    rmSync(postgresDataDir, { recursive: true, force: true });
   });
 
   test('admin upload + employee prompt from real UI', async ({ page }) => {
+    const { appPort } = await contextPromise;
     await page.goto(`http://127.0.0.1:${appPort}/ui`);
 
     await page.fill(
@@ -163,6 +171,7 @@ test.describe('browser + real postgres runtime CUJ', () => {
   });
 
   test('ui shows error for invalid authored payload', async ({ page }) => {
+    const { appPort } = await contextPromise;
     await page.goto(`http://127.0.0.1:${appPort}/ui`);
 
     await page.fill(

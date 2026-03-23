@@ -44,8 +44,14 @@ export type TrustAssuranceSummary = Readonly<{
   readonly disclosureReason: ReducedAssuranceReason;
 }>;
 
+/**
+ * hasNonEmptyValue.
+ */
 const hasNonEmptyValue = (value: string): boolean => value.trim().length > 0;
 
+/**
+ * validateBuildProvenanceMetadata.
+ */
 export const validateBuildProvenanceMetadata = (
   metadata: BuildProvenanceMetadata
 ): BuildProvenanceValidationResult => {
@@ -59,6 +65,9 @@ export const validateBuildProvenanceMetadata = (
   };
 };
 
+/**
+ * determineTrustAssurance.
+ */
 export const determineTrustAssurance = (
   verificationSignals: RuntimeVerificationSignals
 ): TrustAssuranceSummary => {

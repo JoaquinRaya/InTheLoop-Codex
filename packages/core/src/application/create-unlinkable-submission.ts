@@ -64,6 +64,9 @@ export type CreateUnlinkableSubmissionArtifactsResult = Readonly<{
 
 const sharedFieldAllowlist = ['survey_day'] as const;
 
+/**
+ * isAllowedSharedField.
+ */
 const isAllowedSharedField = (field: string): boolean =>
   sharedFieldAllowlist.some((allowedField) => allowedField === field);
 

@@ -21,6 +21,9 @@ type SerializedVersionedState = Readonly<{
   readonly state: QuestionSelectionState;
 }>;
 
+/**
+ * deserialize.
+ */
 const deserialize = (raw: string | null): StoredQuestionSelectionState => {
   if (raw === null) {
     return {
@@ -37,6 +40,9 @@ const deserialize = (raw: string | null): StoredQuestionSelectionState => {
   };
 };
 
+/**
+ * serialize.
+ */
 const serialize = (stored: StoredQuestionSelectionState): string =>
   JSON.stringify({
     version: stored.version,
@@ -50,6 +56,9 @@ export const createVersionedQuestionSelectionStateStore = (
   storage: StorageLike,
   storageKeyPrefix = 'question_selection_state'
 ): ForQuestionSelectionStateStorage => {
+  /**
+   * keyForTenant.
+   */
   const keyForTenant = (tenantId: string): string => `${storageKeyPrefix}:${tenantId}`;
 
   return {

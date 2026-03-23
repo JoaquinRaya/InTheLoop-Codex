@@ -75,13 +75,25 @@ export type BuildDashboardAnalyticsInput = Readonly<{
   readonly minimumResponseThreshold: number;
 }>;
 
+/**
+ * normalizeIsoDay.
+ */
 const normalizeIsoDay = (value: string): string => `${value}T00:00:00.000Z`;
 
+/**
+ * isValidIsoDay.
+ */
 const isValidIsoDay = (value: string): boolean => !Number.isNaN(Date.parse(normalizeIsoDay(value)));
 
+/**
+ * average.
+ */
 const average = (values: ReadonlyArray<number>): number =>
   values.reduce((total, item) => total + item, 0) / values.length;
 
+/**
+ * rangeDays.
+ */
 const rangeDays = (startDay: string, endDay: string): ReadonlyArray<string> => {
   const start = new Date(normalizeIsoDay(startDay));
   const end = new Date(normalizeIsoDay(endDay));
@@ -95,6 +107,9 @@ const rangeDays = (startDay: string, endDay: string): ReadonlyArray<string> => {
   });
 };
 
+/**
+ * previousWindowFor.
+ */
 const previousWindowFor = (
   timePeriod: DashboardFilters['timePeriod']
 ): DashboardFilters['timePeriod'] => {
@@ -112,6 +127,9 @@ const previousWindowFor = (
   };
 };
 
+/**
+ * managerScopeAllows.
+ */
 const managerScopeAllows = (
   scope: DashboardManagerScope,
   managerEmail: string,
@@ -130,6 +148,9 @@ const managerScopeAllows = (
   }
 
   const byManager = new Map(hierarchy.map((entry) => [entry.managerEmail, entry] as const));
+  /**
+   * hasAncestorManager.
+   */
   const hasAncestorManager = (currentManagerEmail: string): boolean => {
     const current = byManager.get(currentManagerEmail);
     if (current === undefined || !isSome(current.parentManagerEmail)) {
@@ -146,9 +167,15 @@ const managerScopeAllows = (
   return hasAncestorManager(managerEmail);
 };
 
+/**
+ * includesAllTags.
+ */
 const includesAllTags = (value: ReadonlyArray<string>, requiredTags: ReadonlyArray<string>): boolean =>
   requiredTags.every((tag) => value.includes(tag));
 
+/**
+ * matchesOptionalFilter.
+ */
 const matchesOptionalFilter = <TValue>(
   filter: Option<TValue> | undefined,
   actual: TValue,
@@ -164,6 +191,9 @@ const matchesOptionalFilter = <TValue>(
   return true;
 };
 
+/**
+ * filterRecords.
+ */
 const filterRecords = (
   input: Readonly<{
     readonly records: ReadonlyArray<DashboardResponseRecord>;
@@ -212,6 +242,9 @@ const filterRecords = (
   });
 };
 
+/**
+ * buildEngagementChart.
+ */
 const buildEngagementChart = (
   filteredRecords: ReadonlyArray<DashboardResponseRecord>
 ): ReadonlyArray<DashboardEngagementPoint> => {
@@ -231,6 +264,9 @@ const buildEngagementChart = (
     .sort((left, right) => left.surveyDay.localeCompare(right.surveyDay));
 };
 
+/**
+ * comparisonPercentage.
+ */
 const comparisonPercentage = (
   currentAverage: number,
   previousAverage: number
@@ -242,6 +278,9 @@ const comparisonPercentage = (
   return some(((currentAverage - previousAverage) / previousAverage) * 100);
 };
 
+/**
+ * buildDrillDown.
+ */
 const buildDrillDown = (
   currentRecords: ReadonlyArray<DashboardResponseRecord>,
   previousRecords: ReadonlyArray<DashboardResponseRecord>,
@@ -284,6 +323,9 @@ const buildDrillDown = (
     .sort((left, right) => right.averageScore - left.averageScore);
 };
 
+/**
+ * buildDashboardAnalytics.
+ */
 export const buildDashboardAnalytics = (
   input: BuildDashboardAnalyticsInput
 ): Either<DashboardAnalyticsError, DashboardAnalyticsResult> => {
